@@ -1,0 +1,101 @@
+<section class="page page-enter">
+  <!-- Header -->
+  <div class="pg-header page-enter-delay-1">
+    <div>
+      <h1 class="pg-title">Good <em>Morning</em></h1>
+      <div class="pg-sub">{{ today }} · Your daily briefing</div>
+    </div>
+    <button class="pg-action">+ New Report</button>
+  </div>
+
+  <!-- Stat cards -->
+  <div class="stat-grid page-enter-delay-2">
+    <app-stat-card
+      label="Portfolio Value"
+      [value]="'$' + formatNum(overviewService.stats()?.finance?.portfolioValue ?? 0)"
+      [delta]="'+$' + formatNum(overviewService.stats()?.finance?.dailyChange ?? 0) + ' today'"
+      [deltaUp]="true"
+      icon="bi-graph-up"
+      accentColor="var(--neon-cyan)" />
+
+    <app-stat-card
+      label="Trending Items"
+      [value]="formatNum(overviewService.stats()?.fashion?.trendingItems ?? 0)"
+      [delta]="'+' + (overviewService.stats()?.fashion?.newDrops ?? 0) + ' hot drops'"
+      [deltaUp]="true"
+      icon="bi-bag-heart"
+      accentColor="var(--neon-magenta)" />
+
+    <app-stat-card
+      label="Music Streams"
+      [value]="formatStreams(overviewService.stats()?.music?.streamsToday ?? 0)"
+      [delta]="'+' + (overviewService.stats()?.music?.streamsDelta ?? 0) + '% vs yesterday'"
+      [deltaUp]="true"
+      icon="bi-music-note-beamed"
+      accentColor="var(--neon-lime)" />
+
+    <app-stat-card
+      label="Platform Health"
+      value="98.7%"
+      delta="All systems operational"
+      [deltaUp]="true"
+      icon="bi-shield-check"
+      accentColor="var(--neon-blue)" />
+  </div>
+
+  <!-- Content row -->
+  <div class="panel-row panel-row--3-2 page-enter-delay-3">
+
+    <!-- Channel performance -->
+    <div class="panel">
+      <div class="panel__head">
+        <span class="panel__title">Channel Performance</span>
+        <button class="panel__action">View All →</button>
+      </div>
+      <div class="panel__body">
+        @for (ch of channels; track ch.name) {
+          <div class="progress-item">
+            <div class="progress-label">
+              <span>{{ ch.name }}</span>
+              <span>{{ ch.score }}%</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" [style.width.%]="ch.score" [style.background]="ch.color"></div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Activity feed -->
+    <div class="panel">
+      <div class="panel__head"><span class="panel__title">Activity Feed</span></div>
+      <div class="panel__body" style="padding-top:8px">
+        @for (item of feed; track item.title) {
+          <div class="feed-item">
+            <div class="feed-thumb" [style.background]="item.bg">{{ item.emoji }}</div>
+            <div>
+              <div class="feed-meta">{{ item.source }}</div>
+              <div class="feed-title">{{ item.title }}</div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Quick nav -->
+  <div class="quick-nav page-enter-delay-3">
+    @for (page of quickNav; track page.route) {
+      <a class="quick-nav__card" [routerLink]="page.route" [style.--qn-color]="page.color">
+        <div class="quick-nav__icon">{{ page.emoji }}</div>
+        <div class="quick-nav__label">{{ page.label }}</div>
+        <div class="quick-nav__arrow"><i class="bi bi-arrow-right"></i></div>
+      </a>
+    }
+  </div>
+
+  <!-- File Manager -->
+  <app-file-manager category="general"></app-file-manager>
+</section>

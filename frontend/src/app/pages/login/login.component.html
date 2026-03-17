@@ -1,0 +1,112 @@
+<div class="auth-container">
+  <div class="auth-card">
+    <!-- Logo / Header -->
+    <div class="auth-header">
+      <h1 class="auth-title">NEXUS</h1>
+      <p class="auth-subtitle">{{ isLogin() ? 'Access Dashboard' : 'Create Account' }}</p>
+    </div>
+
+    <!-- Error Message -->
+    <div *ngIf="authService.error()" class="auth-error">
+      <i class="bi bi-exclamation-circle"></i>
+      {{ authService.error() }}
+    </div>
+
+    <!-- Form -->
+    <form (ngSubmit)="submit()" class="auth-form">
+      <!-- Username (Register only) -->
+      <div *ngIf="!isLogin()" class="form-group">
+        <label for="username" class="form-label">Username</label>
+        <input
+          type="text"
+          id="username"
+          [(ngModel)]="username"
+          name="username"
+          class="form-input"
+          placeholder="Choose your username"
+          required
+          [disabled]="authService.isLoading()"
+        />
+      </div>
+
+      <!-- Email -->
+      <div class="form-group">
+        <label for="email" class="form-label">Email Address</label>
+        <input
+          type="email"
+          id="email"
+          [(ngModel)]="email"
+          name="email"
+          class="form-input"
+          placeholder="your@email.com"
+          required
+          [disabled]="authService.isLoading()"
+        />
+      </div>
+
+      <!-- Password -->
+      <div class="form-group">
+        <label for="password" class="form-label">Password</label>
+        <input
+          type="password"
+          id="password"
+          [(ngModel)]="password"
+          name="password"
+          class="form-input"
+          placeholder="••••••••"
+          required
+          [disabled]="authService.isLoading()"
+        />
+      </div>
+
+      <!-- Confirm Password (Register only) -->
+      <div *ngIf="!isLogin()" class="form-group">
+        <label for="confirmPassword" class="form-label">Confirm Password</label>
+        <input
+          type="password"
+          id="confirmPassword"
+          [(ngModel)]="confirmPassword"
+          name="confirmPassword"
+          class="form-input"
+          placeholder="••••••••"
+          required
+          [disabled]="authService.isLoading()"
+        />
+      </div>
+
+      <!-- Submit Button -->
+      <button
+        type="submit"
+        class="auth-button"
+        [disabled]="authService.isLoading()"
+      >
+        <span *ngIf="!authService.isLoading()">
+          {{ isLogin() ? 'Sign In' : 'Create Account' }}
+        </span>
+        <span *ngIf="authService.isLoading()" class="spinner">
+          <i class="bi bi-arrow-repeat spin"></i>
+        </span>
+      </button>
+    </form>
+
+    <!-- Toggle -->
+    <div class="auth-toggle">
+      <span>{{ isLogin() ? "Don't have an account?" : 'Already have an account?' }}</span>
+      <button
+        type="button"
+        class="auth-toggle-btn"
+        (click)="toggleMode()"
+        [disabled]="authService.isLoading()"
+      >
+        {{ isLogin() ? 'Register' : 'Sign In' }}
+      </button>
+    </div>
+
+    <!-- Demo Info -->
+    <div class="auth-demo" *ngIf="isLogin()">
+      <p class="text-muted font-mono">
+        <strong>Demo:</strong> Use any valid email/password (6+ characters)
+      </p>
+    </div>
+  </div>
+</div>

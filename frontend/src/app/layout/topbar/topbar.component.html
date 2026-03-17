@@ -1,0 +1,22 @@
+<header class="topbar">
+  <div class="topbar__title">
+    <i class="bi bi-calendar-event"></i>
+    {{ today }}
+  </div>
+
+  <div class="topbar__search">
+    <i class="bi bi-search"></i>
+    <span>Search anything…</span>
+  </div>
+
+  <div class="topbar__actions">
+    <button class="icon-btn" aria-label="Notifications" title="You have 3 new alerts">
+      <i class="bi bi-zap-fill"></i>
+      <span class="icon-btn__dot"></span>
+    </button>
+    <div class="user-badge">
+      <span class="user-badge__avatar">{{ getInitials() }}</span>
+      <span class="user-badge__name">{{ authService.currentUser()?.username || 'User' }}</span>
+    </div>
+  </div>
+</header>

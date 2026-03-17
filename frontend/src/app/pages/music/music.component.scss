@@ -1,0 +1,371 @@
+:host { display: block; --page-accent: var(--accent-electric); }
+.page { padding: 36px 40px; }
+
+.pg-header { margin-bottom: 36px; display: flex; align-items: flex-end; justify-content: space-between; }
+.pg-title {
+  font-family: 'DM Serif Display', serif; font-size: 3rem; letter-spacing: -2px; line-height: 1;
+  em { font-style: italic; color: var(--accent-electric); }
+}
+.pg-sub { font-family: 'DM Mono', monospace; font-size: 0.68rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-top: 6px; }
+.pg-actions { display: flex; gap: 10px; }
+.pg-action {
+  font-family: 'Syne', sans-serif; font-size: 0.78rem; font-weight: 700; color: white;
+  background: var(--accent-electric); border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;
+}
+.pg-action--outline {
+  background: transparent; border: 1.5px solid var(--accent-electric); color: var(--accent-electric);
+  &:hover { background: rgba(108,99,255,0.1); }
+}
+
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+.panel-row { display: grid; gap: 20px; margin-bottom: 20px; }
+.panel-row--3-2 { grid-template-columns: 3fr 2fr; }
+.panel-row--2   { grid-template-columns: 1fr 1fr; }
+
+/* Track list */
+.track-item {
+  display: flex; align-items: center; gap: 16px; padding: 10px 0;
+  border-bottom: 1px solid var(--border); cursor: pointer; transition: transform 0.15s;
+  &:last-child { border-bottom: none; }
+  &:hover { transform: translateX(4px); }
+  &:hover .track-play { opacity: 1; }
+}
+.track-num { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--muted); width: 20px; text-align: center; }
+.track-art { width: 40px; height: 40px; border-radius: 6px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+.track-name   { font-size: 0.85rem; font-weight: 700; }
+.track-artist { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+.track-duration { margin-left: auto; font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--muted); }
+.track-play {
+  width: 30px; height: 30px; border-radius: 50%; border: none;
+  background: var(--accent-electric); color: white;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.75rem; cursor: pointer; opacity: 0; transition: opacity 0.2s;
+}
+
+/* Now playing */
+.now-playing { text-align: center; }
+.np-disc {
+  width: 80px; height: 80px; border-radius: 50%;
+  margin: 0 auto 16px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2rem;
+  box-shadow: 0 0 40px rgba(108,99,255,0.3);
+}
+.np-title  { font-weight: 700; font-size: 1rem; margin-bottom: 4px;
+             white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.np-artist { font-size: 0.78rem; color: var(--muted); margin-bottom: 8px; }
+.np-source-badge {
+  display: inline-block; font-family: 'DM Mono', monospace; font-size: 0.58rem;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  background: rgba(108,99,255,0.12); color: var(--accent-electric);
+  border-radius: 4px; padding: 2px 7px; margin-bottom: 12px;
+}
+.waveform {
+  display: flex; align-items: center; gap: 3px; height: 60px; padding: 0 4px;
+  .wf-bar {
+    flex: 1; border-radius: 2px; background: var(--accent-electric);
+    opacity: 0.3; transition: height 0.5s ease;
+    &.active { opacity: 1; }
+  }
+}
+.np-times { display: flex; justify-content: space-between; font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--muted); margin: 10px 0; }
+.np-progress-track { height: 4px; background: rgba(10,10,15,0.08); border-radius: 99px; margin-bottom: 20px; overflow: hidden; cursor: pointer; }
+.np-progress-fill  { height: 100%; background: var(--accent-electric); border-radius: 99px; transition: width 0.25s linear; }
+.np-controls {
+  display: flex; align-items: center; justify-content: center; gap: 20px;
+  button { border: none; background: none; cursor: pointer; }
+  .ctrl-muted { color: var(--muted); font-size: 1.2rem; }
+  .ctrl-nav   { color: var(--ink);   font-size: 1.5rem; }
+  .ctrl-play  {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: var(--accent-electric); color: white;
+    display: flex; align-items: center; justify-content: center; font-size: 1rem;
+  }
+  button:disabled { opacity: 0.35; cursor: default; }
+}
+
+/* =================================================
+   BEAT STUDIO
+   ================================================= */
+
+.bs-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 9000;
+}
+.bs-modal {
+  position: fixed; inset: 0; z-index: 9001;
+  display: flex; flex-direction: column;
+  background: #0a0a12; color: #d0d4f0;
+  font-family: 'Syne', sans-serif;
+}
+
+/* Topbar */
+.bs-topbar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 16px; background: #0f0f1c;
+  border-bottom: 1px solid rgba(108,99,255,0.18);
+  flex-shrink: 0; height: 50px;
+}
+.bs-logo {
+  font-family: 'DM Serif Display', serif; font-size: 1.05rem; color: var(--accent-electric);
+  white-space: nowrap; margin-right: 4px; letter-spacing: -0.5px;
+}
+.bs-sep { flex: 1; }
+
+/* BPM control */
+.bpm-wrap {
+  display: flex; align-items: center; gap: 0;
+  background: rgba(108,99,255,0.1); border: 1px solid rgba(108,99,255,0.25);
+  border-radius: 6px; overflow: hidden;
+}
+.bpm-adj {
+  border: none; background: transparent; color: #6c63ff; cursor: pointer;
+  padding: 0 9px; font-size: 1rem; line-height: 32px; font-weight: 700;
+  &:hover { background: rgba(108,99,255,0.2); color: #fff; }
+}
+.bpm-val {
+  font-family: 'DM Mono', monospace; font-size: 0.88rem; font-weight: 700;
+  color: #fff; padding: 0 4px; min-width: 38px; text-align: center; line-height: 32px;
+}
+.bpm-lbl {
+  font-family: 'DM Mono', monospace; font-size: 0.55rem; color: rgba(108,99,255,0.7);
+  letter-spacing: 0.08em; padding-right: 8px; line-height: 32px;
+}
+
+/* Transport */
+.bs-tbtn {
+  display: inline-flex; align-items: center; gap: 5px; padding: 6px 14px;
+  border-radius: 6px; border: none; cursor: pointer;
+  font-family: 'Syne', sans-serif; font-size: 0.73rem; font-weight: 700;
+  background: rgba(255,255,255,0.07); color: #a0a0cc;
+  transition: background 0.14s, color 0.14s;
+  &:hover:not(:disabled) { background: rgba(255,255,255,0.14); color: #fff; }
+  &:disabled { opacity: 0.35; cursor: not-allowed; }
+}
+.bs-tbtn--play  { background: rgba(108,99,255,0.25); color: #6c63ff; &:hover:not(:disabled) { background: rgba(108,99,255,0.45); color: #fff; } }
+.bs-tbtn--stop  { background: rgba(255,80,80,0.15); color: #ff6060; &:hover:not(:disabled) { background: rgba(255,80,80,0.3); color: #ff9090; } }
+.bs-tbtn--close { background: rgba(255,60,60,0.1); color: #ff6060; &:hover:not(:disabled) { background: rgba(255,60,60,0.25); color: #ffaaaa; } }
+.bs-tbtn--active { background: rgba(108,99,255,0.5) !important; color: #fff !important; }
+
+.bs-preset-select {
+  background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 5px; color: #c0c0e0; font-family: 'Syne', sans-serif; font-size: 0.72rem;
+  padding: 5px 8px; outline: none; cursor: pointer;
+  &:focus { border-color: #6c63ff; }
+}
+
+/* Swing */
+.swing-wrap {
+  display: flex; align-items: center; gap: 6px;
+  font-family: 'DM Mono', monospace; font-size: 0.62rem; color: rgba(255,255,255,0.4);
+}
+.swing-slider { width: 70px; accent-color: #6c63ff; }
+
+/* Body */
+.bs-body { display: flex; flex: 1; overflow: hidden; }
+
+/* Sequencer Panel */
+.bs-seq {
+  flex: 1; min-width: 0; display: flex; flex-direction: column;
+  padding: 14px 16px; overflow-y: auto;
+  border-right: 1px solid rgba(255,255,255,0.06);
+}
+
+/* Step header */
+.seq-step-header {
+  display: grid;
+  grid-template-columns: 90px 50px 26px repeat(16, 1fr);
+  gap: 3px; margin-bottom: 5px; padding: 0 1px;
+}
+.ssh-label { /* empty label cell */ }
+.ssh-vol   { /* empty vol cell */  }
+.ssh-mute  { /* empty mute cell */ }
+.ssh-step {
+  text-align: center; font-family: 'DM Mono', monospace;
+  font-size: 0.52rem; color: rgba(255,255,255,0.2);
+  padding: 0 1px;
+}
+.ssh-step--beat { color: rgba(108,99,255,0.6); font-weight: 700; }
+.ssh-step--active { color: #6c63ff !important; font-weight: 700; }
+
+/* Track row */
+.seq-track {
+  display: grid;
+  grid-template-columns: 90px 50px 26px repeat(16, 1fr);
+  gap: 3px; align-items: center; margin-bottom: 4px;
+}
+.seq-track-label {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.72rem; font-weight: 700; color: #b0b0cc;
+  overflow: hidden;
+}
+.seq-track-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+.seq-vol {
+  display: flex; align-items: center;
+}
+.seq-vol-slider {
+  width: 100%; accent-color: #6c63ff; cursor: pointer;
+}
+.seq-mute {
+  width: 22px; height: 22px; border-radius: 4px; border: none; cursor: pointer;
+  background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.35);
+  display: flex; align-items: center; justify-content: center; font-size: 0.6rem;
+  transition: all 0.12s;
+  &:hover { background: rgba(255,100,100,0.2); color: #ff7070; }
+}
+.seq-mute--on {
+  background: rgba(255,100,100,0.25) !important; color: #ff7070 !important;
+}
+
+/* Step buttons */
+.seq-step {
+  height: 28px; border-radius: 4px; border: none; cursor: pointer;
+  transition: background 0.08s, box-shadow 0.08s;
+  background: rgba(255,255,255,0.05);
+  &:hover { background: rgba(255,255,255,0.12); }
+}
+.seq-step--beat1 { background: rgba(255,255,255,0.04); }
+.seq-step--beat2 { background: rgba(255,255,255,0.07); }
+.seq-step--on    { }
+.seq-step--active {
+  outline: 2px solid rgba(108,99,255,0.9) !important;
+  outline-offset: 1px;
+}
+
+/* Mixer strip */
+.bs-mixer {
+  display: flex; align-items: center; gap: 20px;
+  padding: 14px 0 0; border-top: 1px solid rgba(255,255,255,0.07);
+  margin-top: 10px; flex-wrap: wrap;
+}
+.bs-fx-group {
+  display: flex; align-items: center; gap: 8px;
+}
+.bs-fx-label {
+  font-family: 'DM Mono', monospace; font-size: 0.6rem; font-weight: 600;
+  letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.3);
+  white-space: nowrap;
+}
+.bs-fx-slider {
+  width: 90px; accent-color: #6c63ff;
+}
+.bs-fx-val {
+  font-family: 'DM Mono', monospace; font-size: 0.65rem; color: rgba(255,255,255,0.4);
+  min-width: 30px;
+}
+
+/* Synth Panel */
+.bs-synth {
+  width: 280px; flex-shrink: 0;
+  display: flex; flex-direction: column;
+  background: #0d0d1a; overflow-y: auto; padding: 14px 12px 16px;
+}
+.bs-synth-title {
+  font-family: 'DM Mono', monospace; font-size: 0.6rem; font-weight: 600;
+  letter-spacing: 0.14em; text-transform: uppercase; color: rgba(108,99,255,0.6);
+  margin-bottom: 10px;
+}
+
+/* Oscillator */
+.osc-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 14px;
+}
+.osc-btn {
+  padding: 7px 4px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04); color: #8080aa; cursor: pointer;
+  font-family: 'DM Mono', monospace; font-size: 0.68rem; font-weight: 700;
+  text-align: center; transition: all 0.12s;
+  &:hover { background: rgba(108,99,255,0.15); border-color: rgba(108,99,255,0.4); color: #c0c0ff; }
+}
+.osc-btn--active {
+  background: rgba(108,99,255,0.3) !important;
+  border-color: #6c63ff !important; color: #fff !important;
+}
+.osc-wave {
+  font-size: 1rem; display: block; margin-bottom: 1px;
+}
+
+/* ADSR */
+.adsr-row {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 7px;
+}
+.adsr-lbl {
+  font-family: 'DM Mono', monospace; font-size: 0.58rem; color: rgba(255,255,255,0.35);
+  width: 14px; text-align: center; text-transform: uppercase;
+}
+.adsr-slider { flex: 1; accent-color: #6c63ff; }
+.adsr-val {
+  font-family: 'DM Mono', monospace; font-size: 0.6rem; color: rgba(255,255,255,0.4);
+  width: 36px; text-align: right;
+}
+
+.bs-synth-sep { border: none; border-top: 1px solid rgba(255,255,255,0.06); margin: 10px 0; }
+
+/* Synth volume */
+.vol-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.vol-lbl { font-family: 'DM Mono', monospace; font-size: 0.58rem; color: rgba(255,255,255,0.35); width: 28px; }
+.vol-slider { flex: 1; accent-color: #6c63ff; }
+
+/* Piano */
+.piano-wrap {
+  margin-top: 10px;
+}
+.piano-lbl {
+  font-family: 'DM Mono', monospace; font-size: 0.58rem; color: rgba(255,255,255,0.28);
+  letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 6px;
+}
+.piano {
+  position: relative; height: 106px;
+  background: #0a0a10; border-radius: 6px; overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.pkey-w {
+  position: absolute; height: 100%; z-index: 1; box-sizing: border-box;
+  background: #f0ece6; border-right: 1px solid #555; border-bottom: none;
+  border-radius: 0 0 4px 4px; cursor: pointer;
+  display: flex; align-items: flex-end; justify-content: center; padding-bottom: 4px;
+  transition: background 0.05s; user-select: none;
+  &:hover { background: #d8e8ff; }
+}
+.pkey-w--active { background: #6c63ff !important; }
+.pkey-b {
+  position: absolute; height: 63%; z-index: 2; box-sizing: border-box;
+  background: #12122a; border: 1px solid rgba(108,99,255,0.3); border-top: none;
+  border-radius: 0 0 3px 3px; cursor: pointer;
+  transition: background 0.05s; user-select: none;
+  &:hover { background: #1e1e4a; }
+}
+.pkey-b--active { background: #6c63ff !important; }
+.pkey-note {
+  font-family: 'DM Mono', monospace; font-size: 0.48rem; color: rgba(0,0,0,0.3);
+}
+
+/* Octave + help text */
+.piano-controls {
+  display: flex; align-items: center; gap: 8px; margin-top: 6px;
+}
+.piano-ctrl-btn {
+  background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);
+  color: #8080aa; border-radius: 4px; padding: 3px 8px; cursor: pointer;
+  font-family: 'DM Mono', monospace; font-size: 0.65rem; font-weight: 700;
+  &:hover { background: rgba(108,99,255,0.2); color: #fff; }
+}
+.piano-oct {
+  font-family: 'DM Mono', monospace; font-size: 0.65rem; color: rgba(255,255,255,0.35);
+  flex: 1; text-align: center;
+}
+
+/* Active note display */
+.active-note-display {
+  text-align: center; margin-top: 8px; min-height: 20px;
+  font-family: 'DM Mono', monospace; font-size: 0.72rem; color: #6c63ff;
+  letter-spacing: 0.1em;
+}
+
+@media (max-width: 900px) {
+  .page { padding: 24px 20px; }
+  .stat-grid { grid-template-columns: 1fr 1fr; }
+  .panel-row--3-2, .panel-row--2 { grid-template-columns: 1fr; }
+  .bs-synth { width: 220px; }
+}

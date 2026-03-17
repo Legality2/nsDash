@@ -1,0 +1,251 @@
+<section class="page page-enter">
+
+  <div class="pg-header page-enter-delay-1">
+    <div>
+      <h1 class="pg-title">Fin<em>ance</em></h1>
+      <div class="pg-sub">Market Overview · Live Data</div>
+    </div>
+    <button class="pg-action">+ Add Watchlist</button>
+  </div>
+
+  <!-- Stat cards -->
+  <div class="stat-grid page-enter-delay-2">
+    <app-stat-card
+      label="Portfolio Value"
+      [value]="portfolio() ? '$' + formatMoney(portfolio()!.totalValue) : '—'"
+      [delta]="portfolio() ? '+$' + formatMoney(portfolio()!.dailyChange) + ' today' : ''"
+      [deltaUp]="true" icon="bi-currency-dollar" accentColor="var(--accent-gold)" />
+
+    <app-stat-card
+      label="S&P 500"
+      [value]="portfolio() ? (portfolio()!.sp500 | number:'1.0-0')! : '—'"
+      [delta]="portfolio() ? '+' + portfolio()!.sp500Change + '%' : ''"
+      [deltaUp]="true" icon="bi-graph-up" accentColor="#2a9d5c" />
+
+    <app-stat-card
+      label="BTC/USD"
+      [value]="portfolio() ? '$' + formatMoney(portfolio()!.btcUsd) : '—'"
+      [delta]="portfolio() ? portfolio()!.btcChange + '%' : ''"
+      [deltaUp]="(portfolio()?.btcChange ?? 0) >= 0" icon="bi-currency-bitcoin" accentColor="#e76f51" />
+
+    <app-stat-card
+      label="10Y Treasury"
+      [value]="portfolio() ? portfolio()!.treasury10y + '%' : '—'"
+      [delta]="portfolio() ? portfolio()!.treasuryChange + ' bps' : ''"
+      [deltaUp]="(portfolio()?.treasuryChange ?? 0) >= 0" icon="bi-bank" accentColor="#457b9d" />
+  </div>
+
+  <!-- Analytics Panel -->
+  <div class="panel analytics-panel page-enter-delay-2">
+    <div class="panel__head">
+      <span class="panel__title">
+        <i class="bi bi-bar-chart-line" style="margin-right:6px"></i>Analytics
+        @if (dataSource() === 'excel') {
+          <span style="font-size:0.6rem;color:var(--accent-gold);margin-left:8px;font-family:'DM Mono',monospace;letter-spacing:0.08em">EXCEL MODE</span>
+        }
+      </span>
+      <div class="src-toggle">
+        <button class="src-btn" [class.src-btn--active]="dataSource()==='db'" (click)="setSource('db')">
+          <i class="bi bi-database"></i>Database
+        </button>
+        <button class="src-btn" [class.src-btn--active]="dataSource()==='excel'" (click)="setSource('excel')">
+          <i class="bi bi-file-earmark-spreadsheet"></i>Excel Import
+        </button>
+      </div>
+    </div>
+
+    <div class="panel__body analytics-body">
+
+      <!-- Excel upload zone -->
+      @if (dataSource() === 'excel') {
+        <div class="excel-zone">
+          @if (!excelFileName()) {
+            <div class="excel-drop"
+                 [class.excel-drop--active]="isDragging()"
+                 (dragover)="onDragOver($event)"
+                 (dragleave)="onDragLeave($event)"
+                 (drop)="onDrop($event)"
+                 (click)="excelInput.click()">
+              <i class="bi bi-file-earmark-spreadsheet excel-drop-icon"></i>
+              <div class="excel-drop-text">
+                @if (excelParsing()) {
+                  <span class="exc-loading"><span class="exc-spinner"></span>Parsing file…</span>
+                } @else {
+                  Drop an <strong>.xlsx / .csv</strong> file or <strong>click to browse</strong>
+                }
+              </div>
+              <div class="excel-drop-hint">
+                Tickers sheet: Symbol · Company · Price · Change · Sector<br>
+                Transactions sheet: Date · Symbol · Type · Amount
+              </div>
+              <input #excelInput type="file" accept=".xlsx,.xls,.csv" hidden
+                     (change)="onFileSelect($event)">
+            </div>
+            @if (excelError()) {
+              <div class="exc-error"><i class="bi bi-exclamation-circle"></i>{{ excelError() }}</div>
+            }
+          } @else {
+            <div class="excel-loaded">
+              <i class="bi bi-file-earmark-spreadsheet-fill"></i>
+              <span class="excel-loaded-name">{{ excelFileName() }}</span>
+              <span class="excel-loaded-stats">
+                {{ excelTickers().length }} tickers · {{ excelTransactions().length }} transactions
+              </span>
+              <button class="excel-clear" (click)="clearExcel()">
+                <i class="bi bi-x-circle"></i>Clear
+              </button>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Charts row -->
+      <div class="chart-grid">
+        <div class="chart-card">
+          <div class="chart-label">Ticker Prices</div>
+          <div class="chart-wrap" style="height:220px">
+            <canvas #priceChartCanvas></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-label">Sector Allocation</div>
+          <div class="chart-wrap" style="height:220px">
+            <canvas #sectorChartCanvas></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Transaction history chart -->
+      <div class="chart-card chart-card--full">
+        <div class="chart-label">Transaction History</div>
+        <div class="chart-wrap" style="height:180px">
+          <canvas #txChartCanvas></canvas>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Watchlist + Sector Allocation -->
+  <div class="panel-row panel-row--3-2 page-enter-delay-3">
+
+    <div class="panel">
+      <div class="panel__head">
+        <span class="panel__title">Watchlist
+          @if (dataSource() === 'excel' && excelTickers().length) {
+            <span style="font-size:0.6rem;color:var(--accent-gold);margin-left:6px;font-family:'DM Mono',monospace">EXCEL</span>
+          }
+        </span>
+        <button class="panel__action">Full Market →</button>
+      </div>
+      <div class="panel__body" style="padding:0 24px">
+        <table class="data-table">
+          <thead>
+            <tr><th>Symbol</th><th>Company</th><th>Price</th><th>Change</th><th>7D</th></tr>
+          </thead>
+          <tbody>
+            @for (t of displayTickers(); track t.symbol) {
+              <tr>
+                <td><span class="ticker-symbol">{{ t.symbol }}</span></td>
+                <td style="font-size:0.75rem;color:var(--muted)">{{ t.company }}</td>
+                <td style="font-family:'DM Mono',monospace">${{ t.price | number:'1.2-2' }}</td>
+                <td>
+                  <span class="tag" [ngClass]="(t.change ?? 0) >= 0 ? 'tag--up' : 'tag--down'">
+                    {{ (t.change ?? 0) >= 0 ? '+' : '' }}{{ t.change }}%
+                  </span>
+                </td>
+                <td>
+                  @if (t.sparkline?.length) {
+                    <svg class="sparkline" viewBox="0 0 80 28">
+                      <polyline fill="none"
+                        [attr.stroke]="(t.change ?? 0) >= 0 ? '#2a9d5c' : '#d4556a'"
+                        stroke-width="1.5"
+                        [attr.points]="toSparkPoints(t.sparkline!)" />
+                    </svg>
+                  } @else {
+                    <span style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted)">—</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel__head"><span class="panel__title">Sector Allocation</span></div>
+      <div class="panel__body">
+        @for (s of portfolio()?.sectors ?? []; track s.name) {
+          <div class="progress-item">
+            <div class="progress-label"><span>{{ s.name }}</span><span>{{ s.allocation }}%</span></div>
+            <div class="progress-track">
+              <div class="progress-fill" [style.width.%]="s.allocation"
+                   [style.background]="sectorColor(s.name)"></div>
+            </div>
+          </div>
+        }
+        <div class="risk-block">
+          <div class="risk-label">Risk Score</div>
+          <div class="risk-value">Moderate</div>
+          <div style="font-size:0.72rem;color:var(--muted);margin-top:4px">
+            Balanced exposure across {{ portfolio()?.sectors?.length ?? 0 }} sectors
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Transactions + News -->
+  <div class="panel-row panel-row--2">
+
+    <div class="panel">
+      <div class="panel__head">
+        <span class="panel__title">Recent Transactions
+          @if (dataSource() === 'excel' && excelTransactions().length) {
+            <span style="font-size:0.6rem;color:var(--accent-gold);margin-left:6px;font-family:'DM Mono',monospace">EXCEL</span>
+          }
+        </span>
+      </div>
+      <div class="panel__body" style="padding:0 24px">
+        <table class="data-table">
+          <thead><tr><th>Date</th><th>Asset</th><th>Type</th><th>Amount</th></tr></thead>
+          <tbody>
+            @for (tx of displayTransactions(); track tx._id ?? tx.symbol) {
+              <tr>
+                <td style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted)">
+                  {{ tx.date | date:'MMM d' }}
+                </td>
+                <td><span class="ticker-symbol">{{ tx.symbol }}</span></td>
+                <td>
+                  <span class="tag" [ngClass]="tx.type === 'BUY' ? 'tag--up' : 'tag--down'">
+                    {{ tx.type }}
+                  </span>
+                </td>
+                <td style="font-family:'DM Mono',monospace">${{ tx.amount | number:'1.0-0' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel__head"><span class="panel__title">Market News</span></div>
+      <div class="panel__body" style="padding-top:4px">
+        @for (n of news; track n.title) {
+          <div class="feed-item">
+            <div>
+              <div class="feed-meta">{{ n.source }}</div>
+              <div class="feed-title">{{ n.title }}</div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- File Manager -->
+  <app-file-manager category="finance"></app-file-manager>
+
+</section>

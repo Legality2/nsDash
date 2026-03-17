@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install)",
+      "Bash(npx ng build --configuration development)",
+      "Bash(node --input-type=module:*)",
+      "Bash(dir \"C:\\\\Users\\\\newma\\\\Documents\\\\Development\\\\nexus-dashboard\")",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(where npm)",
+      "Bash(\"C:\\\\Program Files\\\\nodejs\\\\npx.cmd\" ng build --configuration=development)",
+      "Bash(\"C:\\\\Program Files\\\\nodejs\\\\npm.cmd\" install helmet express-rate-limit express-mongo-sanitize hpp)",
+      "Bash(node --check \"C:\\\\Users\\\\newma\\\\Documents\\\\Development\\\\nexus-dashboard\\\\backend\\\\server.js\")",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(node --check \"C:\\\\Users\\\\newma\\\\Documents\\\\Development\\\\nexus-dashboard\\\\backend\\\\middleware\\\\auth.middleware.js\")",
+      "Bash(node --check \"C:\\\\Users\\\\newma\\\\Documents\\\\Development\\\\nexus-dashboard\\\\backend\\\\routes\\\\auth.routes.js\")",
+      "Bash(node --check \"C:\\\\Users\\\\newma\\\\Documents\\\\Development\\\\nexus-dashboard\\\\backend\\\\controllers\\\\files.controller.js\")",
+      "Bash(node --check \"C:\\\\Users\\\\newma\\\\Documents\\\\Development\\\\nexus-dashboard\\\\backend\\\\routes\\\\files.routes.js\")",
+      "Bash(node --check \"C:\\\\Users\\\\newma\\\\Documents\\\\Development\\\\nexus-dashboard\\\\backend\\\\middleware\\\\validate.middleware.js\")",
+      "Bash(node --check \"C:\\\\Users\\\\newma\\\\Documents\\\\Development\\\\nexus-dashboard\\\\backend\\\\controllers\\\\project.controller.js\")",
+      "Bash(node --check \"C:\\\\Users\\\\newma\\\\Documents\\\\Development\\\\nexus-dashboard\\\\backend\\\\routes\\\\project.routes.js\")",
+      "Bash(node --check \"C:\\\\Users\\\\newma\\\\Documents\\\\Development\\\\nexus-dashboard\\\\backend\\\\models\\\\user.model.js\")",
+      "Bash(del \"C:\\\\Users\\\\newma\\\\Documents\\\\Development\\\\nexus-dashboard\\\\frontend\\\\src\\\\app\\\\services\\\\.gitignore\")"
+    ]
+  }
+}

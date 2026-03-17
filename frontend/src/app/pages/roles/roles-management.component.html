@@ -1,0 +1,121 @@
+<section class="page page-enter">
+  <!-- Header -->
+  <div class="pg-header page-enter-delay-1">
+    <h1 class="pg-title">Role Management</h1>
+    <button class="pg-action" (click)="openCreateRoleModal()">+ New Custom Role</button>
+  </div>
+
+  <!-- Error/Success -->
+  @if (rolesService.error()) {
+    <div class="alert alert-error">
+      <i class="bi bi-exclamation-circle"></i>
+      {{ rolesService.error() }}
+    </div>
+  }
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button
+      class="tab"
+      [class.tab--active]="activeTab() === 'roles'"
+      (click)="activeTab.set('roles')"
+    >
+      Roles ({{ rolesService.roles().length }})
+    </button>
+    <button
+      class="tab"
+      [class.tab--active]="activeTab() === 'permissions'"
+      (click)="activeTab.set('permissions')"
+    >
+      Permissions ({{ rolesService.permissions().length }})
+    </button>
+  </div>
+
+  <!-- Roles Tab -->
+  @if (activeTab() === 'roles') {
+    <div class="panel page-enter-delay-2">
+      <div class="panel__body">
+        @if (rolesService.isLoading()) {
+          <div class="loading">Loading roles...</div>
+        } @else if (rolesService.roles().length === 0) {
+          <div class="empty-state">No roles found</div>
+        } @else {
+          <div class="roles-grid">
+            @for (role of rolesService.roles(); track role._id) {
+              <div class="role-card" [class.role-card--system]="role.type === 'system'">
+                <div class="role-card__header">
+                  <div>
+                    <h3 class="role-card__title">{{ role.name }}</h3>
+                    <p class="role-card__description">{{ role.description }}</p>
+                  </div>
+                  <span class="role-card__badge" [class.badge--system]="role.type === 'system'">
+                    {{ role.type }}
+                  </span>
+                </div>
+
+                <div class="role-card__permissions">
+                  <div class="perms-label">Permissions ({{ role.permissions?.length || 0 }})</div>
+                  <div class="perms-list">
+                    @for (perm of role.permissions?.slice(0, 3); track perm._id) {
+                      <span class="perm-tag">{{ perm.resource }}.{{ perm.action }}</span>
+                    }
+                    @if ((role.permissions?.length || 0) > 3) {
+                      <span class="perm-tag perm-tag--more">
+                        +{{ (role.permissions?.length || 0) - 3 }} more
+                      </span>
+                    }
+                  </div>
+                </div>
+
+                <div class="role-card__actions">
+                  <button class="btn btn--secondary" (click)="editRole(role)">Edit</button>
+                  @if (role.type === 'custom') {
+                    <button class="btn btn--danger" (click)="deleteRole(role._id)">Delete</button>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Permissions Tab -->
+  @if (activeTab() === 'permissions') {
+    <div class="panel page-enter-delay-2">
+      <div class="panel__head">
+        <span class="panel__title">System Permissions</span>
+      </div>
+      <div class="panel__body">
+        @if (rolesService.isLoading()) {
+          <div class="loading">Loading permissions...</div>
+        } @else if (rolesService.permissions().length === 0) {
+          <div class="empty-state">No permissions found</div>
+        } @else {
+          <div class="permissions-table">
+            <div class="table-header">
+              <div class="col col--20">Name</div>
+              <div class="col col--20">Resource</div>
+              <div class="col col--20">Action</div>
+              <div class="col col--40">Description</div>
+            </div>
+
+            @for (perm of rolesService.permissions(); track perm._id) {
+              <div class="table-row">
+                <div class="col col--20 font-mono">{{ perm.name }}</div>
+                <div class="col col--20">
+                  <span class="tag tag--neu">{{ perm.resource }}</span>
+                </div>
+                <div class="col col--20">
+                  <span class="tag tag--up">{{ perm.action }}</span>
+                </div>
+                <div class="col col--40">{{ perm.description }}</div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  }
+</section>

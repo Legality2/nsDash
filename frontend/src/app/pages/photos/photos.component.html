@@ -1,0 +1,269 @@
+<section class="page page-enter">
+
+  <!-- ── Header ── -->
+  <div class="pg-header page-enter-delay-1">
+    <div>
+      <h1 class="pg-title">Photo <em>Studio</em></h1>
+      <div class="pg-sub">Bookings · Portfolio · Delivery</div>
+    </div>
+    <button class="pg-action">
+      <i class="bi bi-plus-lg"></i>&nbsp;&nbsp;New Shoot
+    </button>
+  </div>
+
+  <!-- ── Stat Cards ── -->
+  <div class="stat-grid page-enter-delay-2">
+    <app-stat-card
+      label="Total Shoots"
+      [value]="(stats()?.totalShoots ?? 0).toString()"
+      [delta]="stats()?.shootsDelta ?? ''"
+      [deltaUp]="true" icon="bi-camera2" accentColor="#f59e0b" />
+    <app-stat-card
+      label="Active Clients"
+      [value]="(stats()?.activeClients ?? 0).toString()"
+      [delta]="stats()?.clientsDelta ?? ''"
+      [deltaUp]="true" icon="bi-people" accentColor="#00ffff" />
+    <app-stat-card
+      label="Photos Delivered"
+      [value]="formatCount(stats()?.photosDelivered ?? 0)"
+      [delta]="stats()?.deliveredDelta ?? ''"
+      [deltaUp]="true" icon="bi-images" accentColor="#9d00ff" />
+    <app-stat-card
+      label="Revenue MTD"
+      [value]="'$' + formatCount(stats()?.revenueMtd ?? 0)"
+      [delta]="stats()?.revenueDelta ?? ''"
+      [deltaUp]="true" icon="bi-currency-dollar" accentColor="#ff0080" />
+  </div>
+
+  <!-- ── Row 1: Shoots Table + Revenue Breakdown ── -->
+  <div class="panel-row panel-row--3-2 page-enter-delay-3">
+
+    <!-- Recent Shoots -->
+    <div class="panel">
+      <div class="panel__head">
+        <span class="panel__title">
+          <i class="bi bi-calendar3" style="margin-right:6px;color:#f59e0b"></i>
+          Shoot Schedule
+        </span>
+        <button class="panel__action">View All →</button>
+      </div>
+      <div class="panel__body" style="padding: 0 24px;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Shoot</th>
+              <th>Type</th>
+              <th>Date</th>
+              <th>Photos</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (shoot of shoots(); track shoot._id) {
+              <tr>
+                <td>
+                  <div class="shoot-name">{{ shoot.name }}</div>
+                  <div class="shoot-client">{{ shoot.client }}</div>
+                </td>
+                <td><span class="type-badge">{{ shoot.type }}</span></td>
+                <td><span class="shoot-date">{{ formatDate(shoot.date) }}</span></td>
+                <td>
+                  @if (shoot.photos > 0) {
+                    <span class="photo-count">
+                      <i class="bi bi-images"></i> {{ shoot.photos }}
+                    </span>
+                  } @else {
+                    <span style="color:var(--text-muted);font-size:0.7rem">—</span>
+                  }
+                </td>
+                <td>
+                  <span class="status-badge"
+                    [ngClass]="statusClass(shoot.status)">
+                    {{ shoot.status }}
+                  </span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Revenue by Shoot Type -->
+    <div class="panel">
+      <div class="panel__head">
+        <span class="panel__title">
+          <i class="bi bi-bar-chart-line" style="margin-right:6px;color:#f59e0b"></i>
+          Revenue by Type
+        </span>
+      </div>
+      <div class="panel__body">
+        @for (rev of stats()?.revenueByType ?? []; track rev.type) {
+          <div class="progress-item">
+            <div class="progress-label">
+              <span class="rev-type">{{ rev.type }}</span>
+              <span class="rev-amount">${{ rev.amount.toLocaleString() }}</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill"
+                   [style.width.%]="rev.pct"
+                   [style.background]="rev.color"
+                   [style.box-shadow]="'0 0 8px ' + rev.color + '55'">
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- Storage usage -->
+        @if (stats()) {
+          <div class="storage-row">
+            <i class="bi bi-hdd" style="color:#f59e0b;font-size:0.9rem"></i>
+            <div class="storage-track">
+              <div class="storage-fill"
+                   [style.width.%]="storagePercent()">
+              </div>
+            </div>
+            <span class="storage-label">
+              <em>{{ stats()!.storageUsedGb.toFixed(2) }} TB</em>
+              / {{ stats()!.storageTotalGb.toFixed(1) }} TB
+            </span>
+          </div>
+        }
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Row 2: Client Roster + Equipment + Upcoming ── -->
+  <div class="panel-row panel-row--2-1-1">
+
+    <!-- Client Roster -->
+    <div class="panel">
+      <div class="panel__head">
+        <span class="panel__title">
+          <i class="bi bi-person-vcard" style="margin-right:6px;color:#f59e0b"></i>
+          Client Roster
+        </span>
+        <button class="panel__action">Manage →</button>
+      </div>
+      <div class="panel__body">
+        @for (client of clients(); track client._id) {
+          <div class="client-item">
+            <div class="client-avatar">{{ initials(client.name) }}</div>
+            <div>
+              <div class="client-name">{{ client.name }}</div>
+              <div class="client-meta">
+                {{ client.type }} · {{ client.totalShoots }} shoot{{ client.totalShoots > 1 ? 's' : '' }}
+                · Last: {{ formatDate(client.lastShoot) }}
+              </div>
+            </div>
+            <span class="client-spend">${{ client.totalSpend.toLocaleString() }}</span>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Equipment Status -->
+    <div class="panel">
+      <div class="panel__head">
+        <span class="panel__title">
+          <i class="bi bi-camera" style="margin-right:6px;color:#f59e0b"></i>
+          Gear
+        </span>
+      </div>
+      <div class="panel__body" style="padding-top:12px">
+        @for (item of equipment(); track item._id) {
+          <div class="equip-item">
+            <span class="equip-dot"
+                  [ngClass]="equipDotClass(item.status)"></span>
+            <div class="equip-info">
+              <div class="equip-name" [title]="item.name">{{ item.name }}</div>
+              <div class="equip-cat">{{ item.category }}</div>
+            </div>
+            @if (item.battery !== null) {
+              <span class="equip-battery">
+                <i class="bi bi-battery-half"></i>{{ item.battery }}%
+              </span>
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Upcoming Shoots -->
+    <div class="panel">
+      <div class="panel__head">
+        <span class="panel__title">
+          <i class="bi bi-calendar-event" style="margin-right:6px;color:#f59e0b"></i>
+          Upcoming
+        </span>
+      </div>
+      <div class="panel__body" style="padding-top:12px">
+        @for (shoot of upcomingShoots(); track shoot._id) {
+          <div class="upcoming-item">
+            <div class="upcoming-date-box">
+              <span class="udb-day">{{ shootDay(shoot.date) }}</span>
+              <span class="udb-month">{{ shootMonth(shoot.date) }}</span>
+            </div>
+            <div>
+              <div class="upcoming-name">{{ shoot.name }}</div>
+              <div class="upcoming-client">{{ shoot.client }}</div>
+              <div style="margin-top:4px">
+                <span class="type-badge" style="font-size:0.52rem">{{ shoot.type }}</span>
+              </div>
+            </div>
+          </div>
+        }
+        @if (upcomingShoots().length === 0) {
+          <div style="text-align:center;padding:20px 0;color:var(--text-muted);font-size:0.8rem">
+            <i class="bi bi-calendar-x" style="display:block;font-size:1.5rem;margin-bottom:6px;opacity:0.4"></i>
+            No upcoming shoots
+          </div>
+        }
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Row 3: Gallery Grid ── -->
+  <div class="panel-row panel-row--full">
+    <div class="panel">
+      <div class="panel__head">
+        <span class="panel__title">
+          <i class="bi bi-grid-3x3-gap" style="margin-right:6px;color:#f59e0b"></i>
+          Recent Galleries
+        </span>
+        <button class="panel__action">All Galleries →</button>
+      </div>
+      <div class="panel__body">
+        <div class="gallery-grid">
+          @for (gallery of galleries(); track gallery._id) {
+            <div class="gallery-card">
+              <div class="gallery-cover" [style.background]="gallery.coverGradient">
+                {{ gallery.coverEmoji }}
+                <div class="gallery-overlay"><span>VIEW GALLERY</span></div>
+              </div>
+              <div class="gallery-meta">
+                <div class="gallery-title" [title]="gallery.title">{{ gallery.title }}</div>
+                <div class="gallery-client">{{ gallery.client }}</div>
+                <div class="gallery-footer">
+                  <span class="gallery-count">
+                    <i class="bi bi-images"></i>
+                    {{ gallery.count > 0 ? gallery.count + ' photos' : 'In progress' }}
+                  </span>
+                  <span class="status-badge" [ngClass]="statusClass(gallery.status)">
+                    {{ gallery.status }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── File Manager ── -->
+  <app-file-manager category="photos"></app-file-manager>
+
+</section>

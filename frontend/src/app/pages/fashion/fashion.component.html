@@ -1,0 +1,498 @@
+<section class="page page-enter">
+
+  <div class="pg-header page-enter-delay-1">
+    <div>
+      <h1 class="pg-title">Fash<em>ion</em></h1>
+      <div class="pg-sub">Trends · Drops · Editorial</div>
+    </div>
+    <div class="pg-actions">
+      <button class="pg-action pg-action--outline" (click)="openStudio()">
+        <i class="bi bi-pencil-square"></i> Design Studio
+      </button>
+      <button class="pg-action">+ Save Look</button>
+    </div>
+  </div>
+
+  <div class="stat-grid page-enter-delay-2">
+    <app-stat-card
+      label="Trending Items"
+      [value]="stats()?.trendingItems?.toLocaleString() ?? '—'"
+      [delta]="'+' + (stats()?.trendingDelta ?? 0) + ' this week'"
+      [deltaUp]="true" icon="bi-bag-heart" accentColor="var(--accent-rose)" />
+    <app-stat-card
+      label="New Drops"
+      [value]="(stats()?.newDrops ?? 0).toString()"
+      delta="12 brands today"
+      [deltaUp]="true" icon="bi-stars" accentColor="#e9c46a" />
+    <app-stat-card
+      label="Saved Looks"
+      [value]="(stats()?.savedLooks ?? 0).toString()"
+      delta="+22 this month"
+      [deltaUp]="true" icon="bi-bookmark-heart" accentColor="#a8dadc" />
+    <app-stat-card
+      label="Style Matches"
+      [value]="(stats()?.styleMatch ?? 0) + '%'"
+      delta="AI-curated for you"
+      [deltaUp]="true" icon="bi-people" accentColor="#8338ec" />
+  </div>
+
+  <div class="panel-row panel-row--2-3 page-enter-delay-3">
+
+    <!-- Categories -->
+    <div class="panel">
+      <div class="panel__head"><span class="panel__title">Top Categories</span></div>
+      <div class="panel__body">
+        @for (cat of stats()?.categories ?? []; track cat.name) {
+          <div class="progress-item">
+            <div class="progress-label"><span>{{ cat.name }}</span><span>{{ cat.score }}%</span></div>
+            <div class="progress-track">
+              <div class="progress-fill" [style.width.%]="cat.score" [style.background]="cat.color"></div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Looks grid -->
+    <div class="panel">
+      <div class="panel__head">
+        <span class="panel__title">Featured Looks</span>
+        <button class="panel__action">Browse All →</button>
+      </div>
+      <div class="panel__body">
+        <div class="look-grid">
+          @for (look of looks(); track look._id) {
+            <div class="look-card">
+              <div class="look-swatch" [style.background]="look.gradient">{{ look.emoji }}</div>
+              <div class="look-overlay"><span>VIEW LOOK</span></div>
+              <button class="save-btn" [ngClass]="{ 'save-btn--active': look.saved }"
+                      (click)="toggleSave(look)">
+                <i class="bi" [class.bi-heart-fill]="look.saved" [class.bi-heart]="!look.saved"></i>
+              </button>
+              <div class="look-meta">
+                <div class="look-label">{{ look.label }}</div>
+                <div class="look-price">from ${{ look.price }}</div>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="panel-row panel-row--2">
+
+    <!-- Brands -->
+    <div class="panel">
+      <div class="panel__head"><span class="panel__title">Trending Brands</span></div>
+      <div class="panel__body" style="padding:0 24px">
+        <table class="data-table">
+          <thead><tr><th>Brand</th><th>Category</th><th>Trend</th></tr></thead>
+          <tbody>
+            @for (b of brands(); track b._id) {
+              <tr>
+                <td style="font-weight:700">{{ b.name }}</td>
+                <td style="font-size:0.75rem;color:var(--muted)">{{ b.category }}</td>
+                <td>
+                  <span class="tag"
+                    [ngClass]="{
+                      'tag--hot':  b.trend === 'Hot',
+                      'tag--up':   b.trend === 'Rising',
+                      'tag--neu':  b.trend === 'Steady',
+                      'tag--down': b.trend === 'Declining'
+                    }">{{ trendEmoji(b.trend) }} {{ b.trend }}</span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Editorial -->
+    <div class="panel">
+      <div class="panel__head"><span class="panel__title">Editorial Picks</span></div>
+      <div class="panel__body" style="padding-top:4px">
+        @for (n of editorial; track n.title) {
+          <div class="feed-item">
+            <div>
+              <div class="feed-meta">{{ n.source }}</div>
+              <div class="feed-title">{{ n.title }}</div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- File Manager -->
+  <app-file-manager category="fashion"></app-file-manager>
+
+</section>
+
+<!-- DESIGN STUDIO MODAL -->
+@if (studioOpen()) {
+  <div class="ds-backdrop" (click)="closeStudio()"></div>
+
+  <div class="ds-modal" (click)="$event.stopPropagation()">
+
+    <!-- Topbar -->
+    <div class="ds-topbar">
+      <span class="ds-logo">✦ Design Studio</span>
+      <input class="ds-name-input" type="text" [value]="designName()"
+             (input)="designName.set($any($event.target).value)"
+             placeholder="Design name…">
+      <span class="ds-topbar__info">{{ CW }}×{{ CH }} px · Fashion Plate</span>
+      <span class="ds-topbar__gap"></span>
+      <button class="ds-tbtn" (click)="undo()" [disabled]="undoStack().length === 0" title="Undo (Ctrl+Z)">
+        <i class="bi bi-arrow-counterclockwise"></i> Undo
+      </button>
+      <button class="ds-tbtn" (click)="clearAll()" title="Clear all layers">
+        <i class="bi bi-trash3"></i> Clear
+      </button>
+      <button class="ds-tbtn" (click)="exportPng()" title="Export as PNG">
+        <i class="bi bi-download"></i> Export PNG
+      </button>
+      <button class="ds-tbtn ds-tbtn--rose"
+              [class.ds-tbtn--saved]="saveStatus() === 'saved'"
+              [class.ds-tbtn--error]="saveStatus() === 'error'"
+              (click)="saveToLibrary()" [disabled]="saveStatus() === 'saving'">
+        @if (saveStatus() === 'idle')   { <i class="bi bi-cloud-upload"></i> Save to Library }
+        @if (saveStatus() === 'saving') { <i class="bi bi-hourglass-split"></i> Saving… }
+        @if (saveStatus() === 'saved')  { <i class="bi bi-check2"></i> Saved! }
+        @if (saveStatus() === 'error')  { <i class="bi bi-exclamation-triangle"></i> Error }
+      </button>
+      <button class="ds-tbtn ds-tbtn--close" (click)="closeStudio()">
+        <i class="bi bi-x-lg"></i> Close
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div class="ds-body">
+
+      <!-- LEFT: Tool Panel -->
+      <div class="ds-tools">
+
+        <div class="ds-t-section">
+          <span class="ds-t-label">Add Layer</span>
+
+          <!-- Upload image -->
+          <label class="ds-add-btn ds-add-btn--rose">
+            <i class="bi bi-image"></i> Upload Image
+            <input type="file" accept="image/*" multiple style="display:none"
+                   (change)="onImageFile($event)">
+          </label>
+
+          <!-- Add color block -->
+          <button class="ds-add-btn" (click)="addColorLayer()">
+            <i class="bi bi-square-fill" [style.color]="newColor()"></i> Add Color Block
+          </button>
+
+          <!-- Add text -->
+          <button class="ds-add-btn" (click)="addTextLayer()">
+            <i class="bi bi-type"></i> Add Text
+          </button>
+        </div>
+
+        <hr class="ds-t-sep">
+
+        <!-- Color picker for new layers -->
+        <div class="ds-t-section">
+          <span class="ds-t-label">Color</span>
+          <div class="ds-color-row">
+            <input class="ds-hex-input" type="text" [value]="newColor()"
+                   (input)="newColor.set($any($event.target).value)"
+                   placeholder="#ff0080" maxlength="7">
+            <input class="ds-native-color" type="color" [value]="newColor()"
+                   (input)="newColor.set($any($event.target).value)">
+          </div>
+          <div class="ds-swatches">
+            @for (c of colorSwatches; track c) {
+              <div class="ds-swatch"
+                   [class.ds-swatch--active]="newColor() === c"
+                   [style.background]="c"
+                   (click)="newColor.set(c)"
+                   [title]="c"></div>
+            }
+          </div>
+        </div>
+
+        <hr class="ds-t-sep">
+
+        <!-- Text config for new text layers -->
+        <div class="ds-t-section">
+          <span class="ds-t-label">Text Options</span>
+          <textarea class="ds-text-input" rows="2" [value]="newText()"
+                    (input)="newText.set($any($event.target).value)"
+                    placeholder="Enter text…"></textarea>
+          <select class="ds-select" [value]="newFontFamily()"
+                  (change)="newFontFamily.set($any($event.target).value)">
+            <option value="'DM Serif Display', serif">DM Serif Display</option>
+            <option value="'Syne', sans-serif">Syne</option>
+            <option value="'DM Mono', monospace">DM Mono</option>
+            <option value="Georgia, serif">Georgia</option>
+            <option value="'Arial', sans-serif">Arial</option>
+            <option value="'Impact', sans-serif">Impact</option>
+          </select>
+          <div class="ds-font-size-row">
+            <span class="ds-font-size-label">Size</span>
+            <input class="ds-hex-input" type="number" [value]="newFontSize()" min="8" max="200"
+                   (input)="newFontSize.set(+$any($event.target).value)" style="width:60px">
+          </div>
+        </div>
+
+        <hr class="ds-t-sep">
+
+        <!-- Background -->
+        <div class="ds-t-section">
+          <span class="ds-t-label">Canvas Background</span>
+          <div class="ds-bg-row">
+            <span class="ds-bg-label">BG Color</span>
+            <input class="ds-native-color" type="color" [value]="canvasBg()"
+                   (input)="canvasBg.set($any($event.target).value)">
+            <input class="ds-hex-input" style="width:72px;flex:none" type="text"
+                   [value]="canvasBg()"
+                   (input)="canvasBg.set($any($event.target).value)" maxlength="7">
+          </div>
+          <!-- Quick BG presets -->
+          <div class="ds-swatches" style="margin-top:7px">
+            @for (c of bgPresets; track c) {
+              <div class="ds-swatch"
+                   [class.ds-swatch--active]="canvasBg() === c"
+                   [style.background]="c"
+                   (click)="canvasBg.set(c)"
+                   [title]="c"></div>
+            }
+          </div>
+        </div>
+
+        <hr class="ds-t-sep">
+
+        <!-- Storage images -->
+        <div class="ds-t-section" style="padding-bottom:12px">
+          <span class="ds-t-label">From Storage</span>
+          @if (storageImages().length > 0) {
+            <div class="ds-storage-grid">
+              @for (f of storageImages(); track f._id) {
+                <div class="ds-storage-thumb" (click)="addStorageLayer(f)" [title]="f.filename">
+                  <img [src]="api.getFileDownloadUrl(f._id)" [alt]="f.filename">
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="ds-storage-empty">
+              No images in fashion storage yet.<br>Upload files below to use here.
+            </div>
+          }
+        </div>
+
+      </div><!-- /ds-tools -->
+
+      <!-- CENTER: Canvas -->
+      <div class="ds-canvas-wrap">
+        <div class="ds-canvas-container">
+          <div class="ds-canvas"
+               [style.width.px]="CW" [style.height.px]="CH"
+               [style.background]="canvasBg()"
+               (click)="deselectAll()">
+
+            @for (layer of layers(); track layer.id; let i = $index) {
+              @if (layer.visible) {
+                <div class="ds-layer"
+                     [class.ds-layer--selected]="selectedId() === layer.id"
+                     [style.left.px]="layer.x"
+                     [style.top.px]="layer.y"
+                     [style.width.px]="layer.width"
+                     [style.height.px]="layer.height"
+                     [style.opacity]="layer.opacity"
+                     [style.transform]="'rotate(' + layer.rotation + 'deg)'"
+                     [style.z-index]="i + 1"
+                     [style.cursor]="layer.locked ? 'default' : 'move'"
+                     (mousedown)="onLayerDown($event, layer)"
+                     (click)="$event.stopPropagation()">
+
+                  @if (layer.type === 'color') {
+                    <div class="ds-layer__fill" [style.background]="layer.color"></div>
+                  } @else if (layer.type === 'image') {
+                    <img class="ds-layer__img" [src]="layer.src" [alt]="layer.name" draggable="false">
+                  } @else if (layer.type === 'text') {
+                    <div class="ds-layer__text"
+                         [style.color]="layer.color"
+                         [style.font-size.px]="layer.fontSize"
+                         [style.font-family]="layer.fontFamily">
+                      {{ layer.text }}
+                    </div>
+                  }
+
+                  @if (selectedId() === layer.id && !layer.locked) {
+                    <div class="ds-handle ds-handle--nw" (mousedown)="onResizeDown($event, layer, 'nw')"></div>
+                    <div class="ds-handle ds-handle--ne" (mousedown)="onResizeDown($event, layer, 'ne')"></div>
+                    <div class="ds-handle ds-handle--sw" (mousedown)="onResizeDown($event, layer, 'sw')"></div>
+                    <div class="ds-handle ds-handle--se" (mousedown)="onResizeDown($event, layer, 'se')"></div>
+                    <div class="ds-handle ds-handle--n"  (mousedown)="onResizeDown($event, layer, 'n')"></div>
+                    <div class="ds-handle ds-handle--s"  (mousedown)="onResizeDown($event, layer, 's')"></div>
+                    <div class="ds-handle ds-handle--e"  (mousedown)="onResizeDown($event, layer, 'e')"></div>
+                    <div class="ds-handle ds-handle--w"  (mousedown)="onResizeDown($event, layer, 'w')"></div>
+                  }
+                </div>
+              }
+            }
+          </div>
+          <div class="ds-canvas-label">{{ CW }} × {{ CH }} px · Fashion Plate</div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Layers + Properties -->
+      <div class="ds-sidebar">
+        <div class="ds-sb-head">
+          <span class="ds-sb-title">Layers</span>
+          @if (layers().length > 0) {
+            <span class="ds-sb-count">{{ layers().length }}</span>
+          }
+        </div>
+
+        <div class="ds-layer-list">
+          @for (layer of layersReversed(); track layer.id) {
+            <div class="ds-layer-row"
+                 [class.ds-layer-row--active]="selectedId() === layer.id"
+                 [class.ds-layer-row--hidden]="!layer.visible"
+                 (click)="selectLayer(layer.id)">
+              <span class="ds-layer-ico">
+                @if (layer.type === 'color') { ■ }
+                @else if (layer.type === 'text') { <i class="bi bi-type"></i> }
+                @else { <i class="bi bi-image"></i> }
+              </span>
+              <span class="ds-layer-name">{{ layer.name }}</span>
+              <div class="ds-layer-btns">
+                <button class="ds-lbtn" (click)="$event.stopPropagation(); bringForward(layer.id)" title="Bring Forward">
+                  <i class="bi bi-chevron-up"></i>
+                </button>
+                <button class="ds-lbtn" (click)="$event.stopPropagation(); sendBack(layer.id)" title="Send Back">
+                  <i class="bi bi-chevron-down"></i>
+                </button>
+                <button class="ds-lbtn" (click)="$event.stopPropagation(); toggleVisible(layer.id)"
+                        [title]="layer.visible ? 'Hide' : 'Show'">
+                  <i class="bi" [class.bi-eye]="layer.visible" [class.bi-eye-slash]="!layer.visible"></i>
+                </button>
+                <button class="ds-lbtn" (click)="$event.stopPropagation(); toggleLock(layer.id)"
+                        [title]="layer.locked ? 'Unlock' : 'Lock'">
+                  <i class="bi" [class.bi-lock]="layer.locked" [class.bi-unlock]="!layer.locked"></i>
+                </button>
+                <button class="ds-lbtn" (click)="$event.stopPropagation(); dupeLayer(layer.id)" title="Duplicate">
+                  <i class="bi bi-copy"></i>
+                </button>
+                <button class="ds-lbtn ds-lbtn--del" (click)="$event.stopPropagation(); deleteLayer(layer.id)" title="Delete">
+                  <i class="bi bi-trash3"></i>
+                </button>
+              </div>
+            </div>
+          }
+          @if (layers().length === 0) {
+            <div class="ds-layer-empty">
+              No layers yet.<br>
+              Add an image, color block,<br>or text from the tools panel.
+            </div>
+          }
+        </div>
+
+        <!-- Properties for selected layer -->
+        @if (selectedLayer()) {
+          <div class="ds-props">
+            <div class="ds-props-title">
+              {{ selectedLayer()!.name }}
+              @if (selectedLayer()!.locked) { · <i class="bi bi-lock" style="font-size:0.7rem"></i> Locked }
+            </div>
+
+            <!-- Position & Size -->
+            <div class="ds-prop-grid">
+              <div class="ds-prop-cell">
+                <span class="ds-prop-lbl">X</span>
+                <input class="ds-prop-num" type="number" [value]="selectedLayer()!.x"
+                       (change)="patchLayer(selectedId()!, { x: +$any($event.target).value })">
+              </div>
+              <div class="ds-prop-cell">
+                <span class="ds-prop-lbl">Y</span>
+                <input class="ds-prop-num" type="number" [value]="selectedLayer()!.y"
+                       (change)="patchLayer(selectedId()!, { y: +$any($event.target).value })">
+              </div>
+              <div class="ds-prop-cell">
+                <span class="ds-prop-lbl">W</span>
+                <input class="ds-prop-num" type="number" [value]="selectedLayer()!.width"
+                       (change)="patchLayer(selectedId()!, { width: Math.max(10, +$any($event.target).value) })">
+              </div>
+              <div class="ds-prop-cell">
+                <span class="ds-prop-lbl">H</span>
+                <input class="ds-prop-num" type="number" [value]="selectedLayer()!.height"
+                       (change)="patchLayer(selectedId()!, { height: Math.max(10, +$any($event.target).value) })">
+              </div>
+            </div>
+
+            <!-- Rotation -->
+            <div class="ds-prop-row">
+              <div class="ds-prop-row-lbl">
+                <span>Rotation</span>
+                <span>{{ selectedLayer()!.rotation }}°</span>
+              </div>
+              <input class="ds-prop-slider" type="range" min="-180" max="180" step="1"
+                     [value]="selectedLayer()!.rotation"
+                     (input)="patchLayer(selectedId()!, { rotation: +$any($event.target).value })">
+            </div>
+
+            <!-- Opacity -->
+            <div class="ds-prop-row">
+              <div class="ds-prop-row-lbl">
+                <span>Opacity</span>
+                <span>{{ selectedLayer()!.opacity * 100 | number:'1.0-0' }}%</span>
+              </div>
+              <input class="ds-prop-slider" type="range" min="0" max="1" step="0.01"
+                     [value]="selectedLayer()!.opacity"
+                     (input)="patchLayer(selectedId()!, { opacity: +$any($event.target).value })">
+            </div>
+
+            <!-- Color (color or text layers) -->
+            @if (selectedLayer()!.type === 'color' || selectedLayer()!.type === 'text') {
+              <div class="ds-prop-row">
+                <div class="ds-prop-row-lbl"><span>{{ selectedLayer()!.type === 'text' ? 'Text Color' : 'Fill Color' }}</span></div>
+                <input class="ds-prop-color-input" type="color"
+                       [value]="selectedLayer()!.color"
+                       (input)="patchLayer(selectedId()!, { color: $any($event.target).value })">
+              </div>
+            }
+
+            <!-- Text-specific -->
+            @if (selectedLayer()!.type === 'text') {
+              <div class="ds-prop-row">
+                <div class="ds-prop-row-lbl"><span>Text Content</span></div>
+                <textarea class="ds-prop-text-input" rows="2"
+                          [value]="selectedLayer()!.text"
+                          (input)="patchLayer(selectedId()!, { text: $any($event.target).value })"></textarea>
+              </div>
+              <div class="ds-prop-row">
+                <div class="ds-prop-row-lbl"><span>Font Family</span></div>
+                <select class="ds-select" [value]="selectedLayer()!.fontFamily"
+                        (change)="patchLayer(selectedId()!, { fontFamily: $any($event.target).value })">
+                  <option value="'DM Serif Display', serif">DM Serif Display</option>
+                  <option value="'Syne', sans-serif">Syne</option>
+                  <option value="'DM Mono', monospace">DM Mono</option>
+                  <option value="Georgia, serif">Georgia</option>
+                  <option value="'Arial', sans-serif">Arial</option>
+                  <option value="'Impact', sans-serif">Impact</option>
+                </select>
+              </div>
+              <div class="ds-prop-row">
+                <div class="ds-prop-row-lbl"><span>Font Size</span><span>{{ selectedLayer()!.fontSize }}px</span></div>
+                <input class="ds-prop-slider" type="range" min="8" max="200" step="1"
+                       [value]="selectedLayer()!.fontSize"
+                       (input)="patchLayer(selectedId()!, { fontSize: +$any($event.target).value })">
+              </div>
+            }
+          </div>
+        }
+
+      </div><!-- /ds-sidebar -->
+
+    </div><!-- /ds-body -->
+
+  </div><!-- /ds-modal -->
+}

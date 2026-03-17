@@ -1,0 +1,459 @@
+<div class="projects-container">
+  <!-- Header -->
+  <div class="projects-header">
+    <div class="header-content">
+      <div class="header-top">
+        <h1 class="page-title">Project Management</h1>
+        <button class="btn-create" (click)="showCreateModal = true">
+          <span class="icon">➕</span> New Project
+        </button>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs-nav">
+        <button
+          class="tab-btn"
+          [class.active]="activeTab === 'overview'"
+          (click)="activeTab = 'overview'"
+        >
+          📊 Overview
+        </button>
+        <button
+          class="tab-btn"
+          [class.active]="activeTab === 'projects'"
+          (click)="activeTab = 'projects'"
+        >
+          📁 Projects
+        </button>
+        <button
+          class="tab-btn"
+          [class.active]="activeTab === 'board'"
+          [disabled]="!selectedProject"
+          (click)="activeTab = 'board'"
+        >
+          🎯 Task Board
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Overview Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'overview'">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon">📊</div>
+        <div class="stat-content">
+          <div class="stat-label">Total Projects</div>
+          <div class="stat-value">{{ stats().totalProjects }}</div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon">🚀</div>
+        <div class="stat-content">
+          <div class="stat-label">Active Projects</div>
+          <div class="stat-value">{{ stats().activeProjects }}</div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon">✅</div>
+        <div class="stat-content">
+          <div class="stat-label">Completed</div>
+          <div class="stat-value">{{ stats().completedProjects }}</div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon">📈</div>
+        <div class="stat-content">
+          <div class="stat-label">Overall Progress</div>
+          <div class="stat-value">{{ stats().overallProgress }}%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Projects -->
+    <div class="section">
+      <h2 class="section-title">Recent Projects</h2>
+      <div class="projects-list">
+        <div *ngIf="projects().length === 0" class="empty-state">
+          <div class="empty-icon">📭</div>
+          <p>No projects yet. Create one to get started!</p>
+        </div>
+
+        <div
+          *ngFor="let project of getFilteredProjects() | slice:0:5"
+          class="project-card"
+          (click)="selectProject(project)"
+        >
+          <div class="project-header">
+            <h3 class="project-name">{{ project.name }}</h3>
+            <div class="project-badges">
+              <span [ngClass]="getStatusBadgeClass(project.status)">
+                {{ project.status }}
+              </span>
+              <span [ngClass]="getPriorityBadgeClass(project.priority)">
+                {{ project.priority }}
+              </span>
+            </div>
+          </div>
+          <p class="project-desc">{{ project.description }}</p>
+          <div class="project-meta">
+            <span class="meta-item">👤 {{ project.owner.username }}</span>
+            <span class="meta-item">👥 {{ project.teamMembers.length }} team</span>
+          </div>
+          <div class="progress-bar">
+            <div
+              class="progress-fill"
+              [style.width.%]="project.progress"
+              [style.backgroundColor]="getProgressColor(project.progress)"
+            ></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Projects Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'projects'">
+    <!-- Filters -->
+    <div class="filters-section">
+      <input
+        type="text"
+        class="search-input"
+        placeholder="Search projects..."
+        [(ngModel)]="searchQuery"
+      />
+
+      <select class="filter-select" [(ngModel)]="statusFilter" (change)="loadProjects()">
+        <option *ngFor="let opt of statusOptions" [value]="opt.value">
+          {{ opt.label }}
+        </option>
+      </select>
+
+      <select class="filter-select" [(ngModel)]="priorityFilter">
+        <option value="all">All Priorities</option>
+        <option *ngFor="let p of priorityOptions.slice(1)" [value]="p">
+          {{ p | uppercase }}
+        </option>
+      </select>
+    </div>
+
+    <!-- Projects Grid -->
+    <div class="projects-grid">
+      <div *ngIf="getFilteredProjects().length === 0" class="empty-state">
+        <div class="empty-icon">🔍</div>
+        <p>No projects found. Try adjusting your filters.</p>
+      </div>
+
+      <div
+        *ngFor="let project of getFilteredProjects()"
+        class="project-card-large"
+        (click)="selectProject(project)"
+      >
+        <div class="card-header">
+          <h3 class="project-name">{{ project.name }}</h3>
+          <div class="card-actions">
+            <button
+              class="btn-icon"
+              (click)="$event.stopPropagation(); updateProjectStatus(project, 'archived')"
+              title="Archive"
+            >
+              📦
+            </button>
+            <button
+              class="btn-icon btn-danger"
+              (click)="$event.stopPropagation(); deleteProject(project)"
+              title="Delete"
+            >
+              🗑️
+            </button>
+          </div>
+        </div>
+
+        <p class="project-desc">{{ project.description }}</p>
+
+        <div class="card-stats">
+          <div class="stat">
+            <span class="stat-label">Status</span>
+            <span [ngClass]="getStatusBadgeClass(project.status)">
+              {{ project.status }}
+            </span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Priority</span>
+            <span [ngClass]="getPriorityBadgeClass(project.priority)">
+              {{ project.priority }}
+            </span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Category</span>
+            <span class="category-badge">{{ project.category }}</span>
+          </div>
+        </div>
+
+        <div class="progress-section">
+          <div class="progress-label">
+            <span>Progress</span>
+            <span class="progress-percent">{{ project.progress }}%</span>
+          </div>
+          <div class="progress-bar">
+            <div
+              class="progress-fill"
+              [style.width.%]="project.progress"
+              [style.backgroundColor]="getProgressColor(project.progress)"
+            ></div>
+          </div>
+        </div>
+
+        <div class="card-footer">
+          <div class="team-members">
+            <div class="member-count">{{ project.teamMembers.length }} members</div>
+          </div>
+          <div class="dates">
+            <span *ngIf="project.startDate" class="date">
+              📅 {{ project.startDate | date:'short' }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Task Board Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'board' && selectedProject">
+    <div class="board-header">
+      <div>
+        <h2 class="board-title">{{ selectedProject.name }}</h2>
+        <p class="board-subtitle">{{ selectedProject.description }}</p>
+      </div>
+      <button class="btn-create" (click)="showTaskModal = true">
+        <span class="icon">➕</span> New Task
+      </button>
+    </div>
+
+    <!-- Kanban Board -->
+    <div class="kanban-board">
+      <div *ngFor="let statusGroup of taskStatusGroups" class="kanban-column">
+        <div class="column-header">
+          <span class="column-icon">{{ statusGroup.icon }}</span>
+          <span class="column-title">{{ statusGroup.label }}</span>
+          <span class="task-count">{{ getTasksByStatus(statusGroup.status).length }}</span>
+        </div>
+
+        <div class="column-content">
+          <div
+            *ngFor="let task of getTasksByStatus(statusGroup.status)"
+            class="task-card"
+            (click)="selectedTask = task"
+          >
+            <div class="task-priority" [class]="'priority-' + task.priority"></div>
+            <h4 class="task-title">{{ task.title }}</h4>
+            <p class="task-desc">{{ task.description }}</p>
+
+            <div class="task-meta">
+              <div *ngIf="task.assignee" class="assignee">
+                👤 {{ (typeof task.assignee === 'string' ? task.assignee : (task.assignee.username || 'Unknown')) }}
+              </div>
+              <div *ngIf="task.dueDate" class="due-date">
+                📅 {{ task.dueDate | date:'short' }}
+              </div>
+            </div>
+
+            <div class="task-footer">
+              <span [ngClass]="getPriorityBadgeClass(task.priority)">
+                {{ task.priority }}
+              </span>
+              <button
+                class="btn-delete"
+                (click)="$event.stopPropagation(); deleteTask(task)"
+                title="Delete task"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+          <button class="btn-add-task" (click)="showTaskModal = true">
+            + Add Task
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create Project Modal -->
+<div class="modal-overlay" *ngIf="showCreateModal" (click)="showCreateModal = false">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Create New Project</h2>
+      <button class="btn-close" (click)="showCreateModal = false">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Project Name *</label>
+        <input
+          type="text"
+          [(ngModel)]="newProject.name"
+          placeholder="Enter project name"
+          class="form-input"
+        />
+      </div>
+
+      <div class="form-group">
+        <label>Description</label>
+        <textarea
+          [(ngModel)]="newProject.description"
+          placeholder="Project description"
+          class="form-textarea"
+          rows="4"
+        ></textarea>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Category</label>
+          <select [(ngModel)]="newProject.category" class="form-input">
+            <option *ngFor="let cat of categoryOptions" [value]="cat">
+              {{ cat | uppercase }}
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Priority</label>
+          <select [(ngModel)]="newProject.priority" class="form-input">
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+            <option value="critical">Critical</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Start Date</label>
+          <input
+            type="date"
+            [(ngModel)]="newProject.startDate"
+            class="form-input"
+          />
+        </div>
+
+        <div class="form-group">
+          <label>End Date</label>
+          <input
+            type="date"
+            [(ngModel)]="newProject.endDate"
+            class="form-input"
+          />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Budget</label>
+        <input
+          type="number"
+          [(ngModel)]="newProject.budget"
+          placeholder="0"
+          class="form-input"
+        />
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="showCreateModal = false">
+        Cancel
+      </button>
+      <button class="btn btn-primary" (click)="createProject()">
+        Create Project
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Create Task Modal -->
+<div class="modal-overlay" *ngIf="showTaskModal" (click)="showTaskModal = false">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Create New Task</h2>
+      <button class="btn-close" (click)="showTaskModal = false">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Task Title *</label>
+        <input
+          type="text"
+          [(ngModel)]="newTask.title"
+          placeholder="Enter task title"
+          class="form-input"
+        />
+      </div>
+
+      <div class="form-group">
+        <label>Description</label>
+        <textarea
+          [(ngModel)]="newTask.description"
+          placeholder="Task description"
+          class="form-textarea"
+          rows="3"
+        ></textarea>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Priority</label>
+          <select [(ngModel)]="newTask.priority" class="form-input">
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+            <option value="critical">Critical</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Due Date</label>
+          <input
+            type="date"
+            [(ngModel)]="newTask.dueDate"
+            class="form-input"
+          />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Estimated Hours</label>
+        <input
+          type="number"
+          [(ngModel)]="newTask.estimatedHours"
+          placeholder="0"
+          class="form-input"
+        />
+      </div>
+
+      <div class="form-group">
+        <label>Labels (comma-separated)</label>
+        <input
+          type="text"
+          [(ngModel)]="newTask.labels"
+          placeholder="bug, feature, documentation"
+          class="form-input"
+        />
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="showTaskModal = false">
+        Cancel
+      </button>
+      <button class="btn btn-primary" (click)="createTask()">
+        Create Task
+      </button>
+    </div>
+  </div>
+</div>

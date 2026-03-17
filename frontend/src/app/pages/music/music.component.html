@@ -1,0 +1,416 @@
+<section class="page page-enter">
+
+  <div class="pg-header page-enter-delay-1">
+    <div>
+      <h1 class="pg-title">Music &amp; <em>Audio</em></h1>
+      <div class="pg-sub">Charts · Releases · Podcasts</div>
+    </div>
+    <div class="pg-actions">
+      <button class="pg-action pg-action--outline" (click)="openStudio()">
+        <i class="bi bi-music-note-list"></i> Beat Studio
+      </button>
+      <button class="pg-action">+ New Playlist</button>
+    </div>
+  </div>
+
+  <div class="stat-grid page-enter-delay-2">
+    <app-stat-card
+      label="Streams Today"
+      [value]="formatStreams(stats()?.streamsToday ?? 0)"
+      [delta]="'+' + (stats()?.streamsDelta ?? 0) + '% vs yesterday'"
+      [deltaUp]="true" icon="bi-music-note-beamed" accentColor="var(--accent-electric)" />
+    <app-stat-card
+      label="New Releases"
+      [value]="(stats()?.newReleases ?? 0).toString()"
+      delta="Across 8 genres"
+      [deltaUp]="true" icon="bi-vinyl" accentColor="#ff6b6b" />
+    <app-stat-card
+      label="Podcasts Live"
+      [value]="(stats()?.podcastsLive ?? 0).toString()"
+      delta="+5 new today"
+      [deltaUp]="true" icon="bi-mic" accentColor="#4ecdc4" />
+    <app-stat-card
+      label="Listening Hours"
+      [value]="(stats()?.listeningHours ?? 0) + 'H'"
+      delta="Your avg this week"
+      [deltaUp]="true" icon="bi-headphones" accentColor="#ffe66d" />
+  </div>
+
+  <div class="panel-row panel-row--3-2 page-enter-delay-3">
+
+    <!-- Tracks -->
+    <div class="panel">
+      <div class="panel__head">
+        <span class="panel__title">Top Tracks — Global</span>
+        <button class="panel__action">Full Chart →</button>
+      </div>
+      <div class="panel__body" style="padding-top:8px">
+        @for (track of tracks(); track track._id) {
+          <div class="track-item" (click)="setNowPlaying(track)">
+            <span class="track-num">{{ track.rank }}</span>
+            <div class="track-art" [style.background]="track.gradient">{{ track.emoji }}</div>
+            <div>
+              <div class="track-name">{{ track.title }}</div>
+              <div class="track-artist">{{ track.artist }}</div>
+            </div>
+            <span class="track-duration">{{ track.duration }}</span>
+            <button class="track-play"><i class="bi bi-play-fill"></i></button>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Now Playing -->
+    <div class="panel">
+      <div class="panel__head"><span class="panel__title">Now Playing</span></div>
+      <div class="panel__body now-playing">
+        <div class="np-disc" [class.spin]="isPlaying()" [style.background]="npGradient()">
+          {{ npEmoji() }}
+        </div>
+        <div class="np-title">{{ npTitle() }}</div>
+        <div class="np-artist">
+          {{ npArtist() }}
+          @if (npAlbum()) { · {{ npAlbum() }} }
+        </div>
+        @if (fileNowPlaying()) {
+          <div class="np-source-badge">
+            <i class="bi bi-folder2-open"></i>&nbsp;File Storage
+          </div>
+        }
+        <div class="waveform">
+          @for (bar of wfBars; track $index) {
+            <div class="wf-bar" [class.active]="isPlaying()" [style.height.%]="bar.height"></div>
+          }
+        </div>
+        <div class="np-times">
+          <span>{{ npElapsed() }}</span>
+          <span>{{ npDuration() }}</span>
+        </div>
+        <div class="np-progress-track" (click)="seekToPercent($event)">
+          <div class="np-progress-fill" [style.width.%]="npProgress()"></div>
+        </div>
+        <div class="np-controls">
+          <button class="ctrl-muted"><i class="bi bi-shuffle"></i></button>
+          <button class="ctrl-nav" [disabled]="!fileNowPlaying()" (click)="seekBack()">
+            <i class="bi bi-skip-backward-fill"></i>
+          </button>
+          <button class="ctrl-play" [disabled]="!fileNowPlaying()" (click)="togglePlayPause()">
+            <i class="bi {{ playIcon() }}"></i>
+          </button>
+          <button class="ctrl-nav" [disabled]="!fileNowPlaying()" (click)="seekForward()">
+            <i class="bi bi-skip-forward-fill"></i>
+          </button>
+          <button class="ctrl-muted"><i class="bi bi-repeat"></i></button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="panel-row panel-row--2">
+    <!-- Genre breakdown -->
+    <div class="panel">
+      <div class="panel__head"><span class="panel__title">Genre Breakdown</span></div>
+      <div class="panel__body">
+        @for (g of stats()?.genres ?? []; track g.name) {
+          <div class="progress-item">
+            <div class="progress-label"><span>{{ g.name }}</span><span>{{ g.pct }}%</span></div>
+            <div class="progress-track">
+              <div class="progress-fill" [style.width.%]="g.pct" [style.background]="g.color"></div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+    <!-- News -->
+    <div class="panel">
+      <div class="panel__head"><span class="panel__title">Music News</span></div>
+      <div class="panel__body" style="padding-top:4px">
+        @for (n of musicNews; track n.title) {
+          <div class="feed-item">
+            <div>
+              <div class="feed-meta">{{ n.source }}</div>
+              <div class="feed-title">{{ n.title }}</div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <app-file-manager category="music" (playFile)="playFromFile($event)"></app-file-manager>
+
+</section>
+
+<!-- BEAT STUDIO MODAL -->
+@if (synthOpen()) {
+  <div class="bs-backdrop" (click)="closeStudio()"></div>
+
+  <div class="bs-modal" (click)="$event.stopPropagation()">
+
+    <!-- Top Bar -->
+    <div class="bs-topbar">
+      <span class="bs-logo">♪ Beat Studio</span>
+
+      <!-- BPM -->
+      <div class="bpm-wrap">
+        <button class="bpm-adj" (click)="bpm.update(v => Math.max(40, v - 1))">−</button>
+        <span class="bpm-val">{{ bpm() }}</span>
+        <button class="bpm-adj" (click)="bpm.update(v => Math.min(220, v + 1))">+</button>
+        <span class="bpm-lbl">BPM</span>
+      </div>
+
+      <!-- Preset -->
+      <select class="bs-preset-select" [value]="selectedPreset()"
+              (change)="loadPreset(+$any($event.target).value)">
+        @for (p of PRESETS; track $index; let i = $index) {
+          <option [value]="i">{{ p.name }}</option>
+        }
+      </select>
+
+      <!-- Swing -->
+      <div class="swing-wrap">
+        <span>SWING</span>
+        <input class="swing-slider" type="range" min="0" max="80" step="1"
+               [value]="swing()"
+               (input)="swing.set(+$any($event.target).value)">
+        <span>{{ swing() }}%</span>
+      </div>
+
+      <span class="bs-sep"></span>
+
+      <!-- Transport -->
+      <button class="bs-tbtn bs-tbtn--play"
+              [class.bs-tbtn--active]="seqPlaying()"
+              [disabled]="seqPlaying()"
+              (click)="startSequencer()">
+        <i class="bi bi-play-fill"></i> Play
+      </button>
+      <button class="bs-tbtn bs-tbtn--stop"
+              [disabled]="!seqPlaying()"
+              (click)="stopSequencer()">
+        <i class="bi bi-stop-fill"></i> Stop
+      </button>
+      <button class="bs-tbtn" (click)="clearPattern()">
+        <i class="bi bi-eraser"></i> Clear
+      </button>
+
+      <button class="bs-tbtn bs-tbtn--close" (click)="closeStudio()">
+        <i class="bi bi-x-lg"></i> Close
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div class="bs-body">
+
+      <!-- LEFT: Step Sequencer -->
+      <div class="bs-seq">
+
+        <!-- Step number header -->
+        <div class="seq-step-header">
+          <div class="ssh-label"></div>
+          <div class="ssh-vol"></div>
+          <div class="ssh-mute"></div>
+          @for (i of stepIndices(); track i) {
+            <div class="ssh-step"
+                 [class.ssh-step--beat]="i % 4 === 0"
+                 [class.ssh-step--active]="visualStep() === i">
+              {{ i + 1 }}
+            </div>
+          }
+        </div>
+
+        <!-- Track rows -->
+        @for (track of drumTracks(); track track.id) {
+          <div class="seq-track">
+
+            <!-- Label -->
+            <div class="seq-track-label">
+              <div class="seq-track-dot" [style.background]="track.color"></div>
+              <span>{{ track.name }}</span>
+            </div>
+
+            <!-- Volume -->
+            <div class="seq-vol">
+              <input class="seq-vol-slider" type="range" min="0" max="1" step="0.02"
+                     [value]="track.volume"
+                     (input)="setTrackVol(track.id, +$any($event.target).value)">
+            </div>
+
+            <!-- Mute -->
+            <button class="seq-mute" [class.seq-mute--on]="track.muted"
+                    (click)="toggleMute(track.id)"
+                    [title]="track.muted ? 'Unmute' : 'Mute'">
+              <i class="bi" [class.bi-volume-mute-fill]="track.muted" [class.bi-volume-up-fill]="!track.muted"></i>
+            </button>
+
+            <!-- Steps -->
+            @for (step of track.steps; track $index; let si = $index) {
+              <button class="seq-step"
+                      [class.seq-step--beat1]="si % 4 < 2"
+                      [class.seq-step--beat2]="si % 4 >= 2"
+                      [class.seq-step--active]="visualStep() === si && seqPlaying()"
+                      [style.background]="step ? track.color : ''"
+                      [style.opacity]="step ? 0.85 : ''"
+                      [style.box-shadow]="step && visualStep() === si && seqPlaying() ? '0 0 10px ' + track.color : ''"
+                      (click)="toggleStep(track.id, si)">
+              </button>
+            }
+          </div>
+        }
+
+        <!-- Mixer Strip -->
+        <div class="bs-mixer">
+          <div class="bs-fx-group">
+            <span class="bs-fx-label">Master</span>
+            <input class="bs-fx-slider" type="range" min="0" max="1" step="0.01"
+                   [value]="masterVol()"
+                   (input)="setMasterVol(+$any($event.target).value)">
+            <span class="bs-fx-val">{{ (masterVol() * 100).toFixed(0) }}%</span>
+          </div>
+          <div class="bs-fx-group">
+            <span class="bs-fx-label">Reverb</span>
+            <input class="bs-fx-slider" type="range" min="0" max="0.9" step="0.01"
+                   [value]="reverbWet()"
+                   (input)="setReverbWet(+$any($event.target).value)">
+            <span class="bs-fx-val">{{ (reverbWet() * 100).toFixed(0) }}%</span>
+          </div>
+          <div class="bs-fx-group">
+            <span class="bs-fx-label">Delay</span>
+            <input class="bs-fx-slider" type="range" min="0" max="0.8" step="0.01"
+                   [value]="delayWet()"
+                   (input)="setDelayWet(+$any($event.target).value)">
+            <span class="bs-fx-val">{{ (delayWet() * 100).toFixed(0) }}%</span>
+          </div>
+          <div class="bs-fx-group">
+            <span class="bs-fx-label">D.Feedback</span>
+            <input class="bs-fx-slider" type="range" min="0" max="0.85" step="0.01"
+                   [value]="delayFeedback()"
+                   (input)="setDelayFeedback(+$any($event.target).value)">
+            <span class="bs-fx-val">{{ (delayFeedback() * 100).toFixed(0) }}%</span>
+          </div>
+          <div class="bs-fx-group">
+            <span class="bs-fx-label">Steps</span>
+            <select class="bs-preset-select" style="font-size:0.65rem;padding:3px 6px"
+                    [value]="stepCount()"
+                    (change)="setStepCount(+$any($event.target).value)">
+              <option [value]="8">8</option>
+              <option [value]="16">16</option>
+              <option [value]="32">32</option>
+            </select>
+          </div>
+        </div>
+
+      </div><!-- /bs-seq -->
+
+      <!-- RIGHT: Synth -->
+      <div class="bs-synth">
+
+        <!-- Oscillator -->
+        <div class="bs-synth-title">Synthesizer</div>
+        <div class="osc-grid">
+          @for (osc of oscTypes; track osc.type) {
+            <button class="osc-btn"
+                    [class.osc-btn--active]="synthOsc() === osc.type"
+                    (click)="synthOsc.set(osc.type)">
+              <span class="osc-wave">{{ osc.icon }}</span>
+              {{ osc.label }}
+            </button>
+          }
+        </div>
+
+        <hr class="bs-synth-sep">
+
+        <!-- ADSR -->
+        <div class="bs-synth-title">ADSR Envelope</div>
+
+        <div class="adsr-row">
+          <span class="adsr-lbl">A</span>
+          <input class="adsr-slider" type="range" min="0.001" max="2" step="0.001"
+                 [value]="synthAtt()"
+                 (input)="synthAtt.set(+$any($event.target).value)">
+          <span class="adsr-val">{{ synthAtt() < 1 ? (synthAtt() * 1000).toFixed(0) + 'ms' : synthAtt().toFixed(2) + 's' }}</span>
+        </div>
+        <div class="adsr-row">
+          <span class="adsr-lbl">D</span>
+          <input class="adsr-slider" type="range" min="0.01" max="2" step="0.01"
+                 [value]="synthDec()"
+                 (input)="synthDec.set(+$any($event.target).value)">
+          <span class="adsr-val">{{ synthDec() < 1 ? (synthDec() * 1000).toFixed(0) + 'ms' : synthDec().toFixed(2) + 's' }}</span>
+        </div>
+        <div class="adsr-row">
+          <span class="adsr-lbl">S</span>
+          <input class="adsr-slider" type="range" min="0" max="1" step="0.01"
+                 [value]="synthSus()"
+                 (input)="synthSus.set(+$any($event.target).value)">
+          <span class="adsr-val">{{ (synthSus() * 100).toFixed(0) }}%</span>
+        </div>
+        <div class="adsr-row">
+          <span class="adsr-lbl">R</span>
+          <input class="adsr-slider" type="range" min="0.01" max="5" step="0.01"
+                 [value]="synthRel()"
+                 (input)="synthRel.set(+$any($event.target).value)">
+          <span class="adsr-val">{{ synthRel() < 1 ? (synthRel() * 1000).toFixed(0) + 'ms' : synthRel().toFixed(2) + 's' }}</span>
+        </div>
+
+        <hr class="bs-synth-sep">
+
+        <!-- Synth Volume -->
+        <div class="vol-row">
+          <span class="vol-lbl">Vol</span>
+          <input class="vol-slider" type="range" min="0" max="1" step="0.01"
+                 [value]="synthVol()"
+                 (input)="synthVol.set(+$any($event.target).value)">
+          <span class="adsr-val">{{ (synthVol() * 100).toFixed(0) }}%</span>
+        </div>
+
+        <hr class="bs-synth-sep">
+
+        <!-- Piano -->
+        <div class="piano-wrap">
+          <div class="piano-lbl">Keyboard — Oct {{ pianoOctave() }}</div>
+          <div class="piano">
+            <!-- White keys -->
+            @for (key of pianoKeys(); track key.note) {
+              @if (!key.isBlack) {
+                <div class="pkey-w"
+                     [class.pkey-w--active]="activeKeys().has(key.note)"
+                     [style.left.%]="key.leftPct"
+                     [style.width.%]="key.widthPct"
+                     (click)="playSynthNote(key.freq, key.note)">
+                  @if (key.label) {
+                    <span class="pkey-note">{{ key.label }}</span>
+                  }
+                </div>
+              }
+            }
+            <!-- Black keys on top -->
+            @for (key of pianoKeys(); track key.note) {
+              @if (key.isBlack) {
+                <div class="pkey-b"
+                     [class.pkey-b--active]="activeKeys().has(key.note)"
+                     [style.left.%]="key.leftPct"
+                     [style.width.%]="key.widthPct"
+                     (click)="$event.stopPropagation(); playSynthNote(key.freq, key.note)">
+                </div>
+              }
+            }
+          </div>
+
+          <div class="piano-controls">
+            <button class="piano-ctrl-btn" (click)="shiftOctave(-1)">Oct −</button>
+            <span class="piano-oct">C{{ pianoOctave() }} — B{{ pianoOctave() + 1 }}</span>
+            <button class="piano-ctrl-btn" (click)="shiftOctave(1)">Oct +</button>
+          </div>
+
+          <div class="active-note-display">
+            @if (lastNote()) { ♪ {{ lastNote() }} }
+          </div>
+        </div>
+
+      </div><!-- /bs-synth -->
+
+    </div><!-- /bs-body -->
+
+  </div><!-- /bs-modal -->
+}

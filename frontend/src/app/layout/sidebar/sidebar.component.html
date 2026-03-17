@@ -1,0 +1,64 @@
+<nav class="sidebar" [class.sidebar--open]="isOpen()">
+  <!-- Brand -->
+  <div class="sidebar__brand">
+    <div class="brand-mark">≫ Nexus</div>
+    <div class="brand-sub">Cyber Dashboard</div>
+  </div>
+
+  <!-- Nav -->
+  <div class="sidebar__nav">
+    <div class="sidebar__section-label">Overview</div>
+    <a class="nav-link" routerLink="/" routerLinkActive="nav-link--active"
+       [routerLinkActiveOptions]="{ exact: true }" (click)="close()">
+      <span class="nav-link__icon"><i class="bi bi-grid-1x2"></i></span>
+      Home
+    </a>
+
+    <div class="sidebar__section-label">Channels</div>
+    @for (item of channels; track item.route) {
+      <a class="nav-link" [routerLink]="item.route" routerLinkActive="nav-link--active"
+         (click)="close()">
+        <span class="nav-link__icon"><i [class]="'bi ' + item.icon"></i></span>
+        {{ item.label }}
+        @if (item.pill) {
+          <span class="nav-link__pill">{{ item.pill }}</span>
+        }
+      </a>
+    }
+
+    <div class="sidebar__section-label">Options</div>
+    <button class="nav-link" (click)="logout()">
+      <span class="nav-link__icon"><i class="bi bi-door-open"></i></span>
+      Logout
+    </button>
+  </div>
+
+  <!-- Admin Section -->
+  <div class="sidebar__admin-section">
+    <div class="sidebar__section-label">Admin</div>
+    <a class="nav-link" routerLink="/roles" routerLinkActive="nav-link--active"
+       (click)="close()">
+      <span class="nav-link__icon"><i class="bi bi-shield-exclamation"></i></span>
+      Role Management
+    </a>
+  </div>
+
+  <!-- Footer -->
+  <div class="sidebar__footer">
+    <div class="avatar">{{ getInitials() }}</div>
+    <div class="user-info">
+      <div class="user-info__name">{{ authService.currentUser()?.username || 'User' }}</div>
+      <div class="user-info__role">Nexus Pro</div>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile overlay -->
+@if (isOpen()) {
+  <div class="sidebar-overlay" (click)="close()"></div>
+}
+
+<!-- Mobile toggle -->
+<button class="sidebar-toggle" (click)="toggle()" aria-label="Toggle menu">
+  <i class="bi" [class.bi-list]="!isOpen()" [class.bi-x]="isOpen()"></i>
+</button>
