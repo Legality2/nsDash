@@ -10,7 +10,7 @@ const permissionSchema = new mongoose.Schema({
   resource: {
     type: String,
     required: true,
-    enum: ['finance', 'fashion', 'music', 'users', 'roles', 'reports', 'settings', 'projects']
+    enum: ['finance', 'fashion', 'music', 'beats', 'users', 'roles', 'reports', 'settings', 'projects']
   },
   action: {
     type: String,

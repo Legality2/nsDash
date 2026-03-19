@@ -19,7 +19,11 @@
       "Bash(node --check \"C:\\\\Users\\\\newma\\\\Documents\\\\Development\\\\nexus-dashboard\\\\backend\\\\controllers\\\\project.controller.js\")",
       "Bash(node --check \"C:\\\\Users\\\\newma\\\\Documents\\\\Development\\\\nexus-dashboard\\\\backend\\\\routes\\\\project.routes.js\")",
       "Bash(node --check \"C:\\\\Users\\\\newma\\\\Documents\\\\Development\\\\nexus-dashboard\\\\backend\\\\models\\\\user.model.js\")",
-      "Bash(del \"C:\\\\Users\\\\newma\\\\Documents\\\\Development\\\\nexus-dashboard\\\\frontend\\\\src\\\\app\\\\services\\\\.gitignore\")"
+      "Bash(del \"C:\\\\Users\\\\newma\\\\Documents\\\\Development\\\\nexus-dashboard\\\\frontend\\\\src\\\\app\\\\services\\\\.gitignore\")",
+      "Bash(npx ng build)",
+      "Bash(where npm.cmd)",
+      "Bash(where npx.cmd)",
+      "Bash(node -e \"console.log\\(process.platform, process.env.ComSpec\\)\")"
     ]
   }
 }

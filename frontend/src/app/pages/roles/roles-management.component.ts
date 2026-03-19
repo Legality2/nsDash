@@ -3,6 +3,11 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RolesService, Role, Permission } from '../../services/roles.service';
 
+interface RolePermissionView {
+  displayed: Permission[];
+  remainingCount: number;
+}
+
 @Component({
   selector: 'app-roles-management',
   standalone: true,
@@ -44,5 +49,15 @@ export class RolesManagementComponent implements OnInit {
         }
       });
     }
+  }
+
+  getPermissionView(permissions: Permission[] | undefined, limit: number = 3): RolePermissionView {
+    if (!permissions || permissions.length === 0) {
+      return { displayed: [], remainingCount: 0 };
+    }
+    return {
+      displayed: permissions.slice(0, limit),
+      remainingCount: Math.max(0, permissions.length - limit)
+    };
   }
 }

@@ -56,12 +56,13 @@
                 <div class="role-card__permissions">
                   <div class="perms-label">Permissions ({{ role.permissions?.length || 0 }})</div>
                   <div class="perms-list">
-                    @for (perm of role.permissions?.slice(0, 3); track perm._id) {
+                    @let permView = getPermissionView(role.permissions);
+                    @for (perm of permView.displayed; track perm._id) {
                       <span class="perm-tag">{{ perm.resource }}.{{ perm.action }}</span>
                     }
-                    @if ((role.permissions?.length || 0) > 3) {
+                    @if (permView.remainingCount > 0) {
                       <span class="perm-tag perm-tag--more">
-                        +{{ (role.permissions?.length || 0) - 3 }} more
+                        +{{ permView.remainingCount }} more
                       </span>
                     }
                   </div>

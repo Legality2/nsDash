@@ -156,9 +156,14 @@
       <div class="bpm-wrap">
         <button class="bpm-adj" (click)="bpm.update(v => Math.max(40, v - 1))">−</button>
         <span class="bpm-val">{{ bpm() }}</span>
-        <button class="bpm-adj" (click)="bpm.update(v => Math.min(220, v + 1))">+</button>
+        <button class="bpm-adj" (click)="bpm.update(v => Math.min(300, v + 1))">+</button>
         <span class="bpm-lbl">BPM</span>
       </div>
+
+      <!-- Tap Tempo -->
+      <button class="bs-tbtn bs-tbtn--tap" (click)="tapTempo()" title="Tap to set tempo">
+        <i class="bi bi-hand-index"></i> Tap
+      </button>
 
       <!-- Preset -->
       <select class="bs-preset-select" [value]="selectedPreset()"
@@ -195,9 +200,88 @@
         <i class="bi bi-eraser"></i> Clear
       </button>
 
-      <button class="bs-tbtn bs-tbtn--close" (click)="closeStudio()">
-        <i class="bi bi-x-lg"></i> Close
+      <!-- Undo / Redo -->
+      <button class="bs-tbtn" [disabled]="!canUndo()" (click)="undo()" title="Undo (Ctrl+Z)">
+        <i class="bi bi-arrow-counterclockwise"></i>
       </button>
+      <button class="bs-tbtn" [disabled]="!canRedo()" (click)="redo()" title="Redo (Ctrl+Shift+Z)">
+        <i class="bi bi-arrow-clockwise"></i>
+      </button>
+
+      <!-- Metronome -->
+      <button class="bs-tbtn" [class.bs-tbtn--active]="metronomeOn()"
+              (click)="metronomeOn.set(!metronomeOn())" title="Metronome">
+        <i class="bi bi-bell"></i>
+      </button>
+
+      <!-- Randomize -->
+      <button class="bs-tbtn" (click)="randomizePattern()" title="Randomize pattern">
+        <i class="bi bi-dice-5"></i>
+      </button>
+
+      <!-- Export WAV -->
+      <button class="bs-tbtn bs-tbtn--export" [disabled]="isExporting()"
+              (click)="exportWav()" title="Export as WAV">
+        <i class="bi bi-download"></i> {{ isExporting() ? 'Exporting...' : 'WAV' }}
+      </button>
+
+      <span class="bs-sep"></span>
+
+      <!-- Layer Management -->
+      <div class="bs-layers-control">
+        <button class="bs-tbtn bs-tbtn--small" title="Add Layer" (click)="addNewLayer()">
+          <i class="bi bi-plus-circle"></i>
+        </button>
+        <button class="bs-tbtn bs-tbtn--small" title="Duplicate Layer" (click)="duplicateCurrentLayer()">
+          <i class="bi bi-files"></i>
+        </button>
+        <button class="bs-tbtn bs-tbtn--small" [disabled]="layers().length <= 1" title="Delete Layer" (click)="deleteCurrentLayer()">
+          <i class="bi bi-trash"></i>
+        </button>
+      </div>
+
+      <span class="bs-sep"></span>
+
+      <!-- Save/Load -->
+      <button class="bs-tbtn" (click)="openSaveDialog()">
+        <i class="bi" [class.bi-cloud-arrow-up]="!currentBeat()" [class.bi-cloud-check]="!!currentBeat()"></i>
+        {{ currentBeat() ? 'Update' : 'Save' }}
+      </button>
+      <button class="bs-tbtn" (click)="openLoadDialog()">
+        <i class="bi bi-cloud-arrow-down"></i> Load
+      </button>
+
+      <button class="bs-tbtn bs-tbtn--close" (click)="closeStudio()">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <!-- Layer Tabs -->
+    <div class="bs-layer-tabs">
+      @for (layer of layers(); track layer.name; let i = $index) {
+        <div class="layer-tab"
+             [class.layer-tab--active]="currentLayerIndex() === i"
+             (click)="loadLayer(i)">
+          <span class="layer-tab-name">{{ layer.name }}</span>
+          @if (currentLayerIndex() === i) {
+            <input class="layer-tab-input"
+                   type="text"
+                   [value]="layer.name"
+                   (blur)="renameCurrentLayer($any($event.target).value)"
+                   (keyup.enter)="renameCurrentLayer($any($event.target).value)"
+                   (click)="$event.stopPropagation()">
+          }
+        </div>
+      }
+    </div>
+
+    <!-- Keyboard shortcuts hint -->
+    <div class="bs-shortcuts-hint">
+      <span>Space: Play/Stop</span>
+      <span>Ctrl+Z: Undo</span>
+      <span>Ctrl+Shift+Z: Redo</span>
+      <span>Esc: Close</span>
+      <span>Right-click step: Cycle velocity</span>
     </div>
 
     <!-- Body -->
@@ -207,10 +291,12 @@
       <div class="bs-seq">
 
         <!-- Step number header -->
-        <div class="seq-step-header">
+        <div class="seq-step-header" [style.grid-template-columns]="gridCols()">
           <div class="ssh-label"></div>
           <div class="ssh-vol"></div>
           <div class="ssh-mute"></div>
+          <div class="ssh-solo"></div>
+          <div class="ssh-pitch"></div>
           @for (i of stepIndices(); track i) {
             <div class="ssh-step"
                  [class.ssh-step--beat]="i % 4 === 0"
@@ -222,7 +308,7 @@
 
         <!-- Track rows -->
         @for (track of drumTracks(); track track.id) {
-          <div class="seq-track">
+          <div class="seq-track" [style.grid-template-columns]="gridCols()">
 
             <!-- Label -->
             <div class="seq-track-label">
@@ -244,16 +330,37 @@
               <i class="bi" [class.bi-volume-mute-fill]="track.muted" [class.bi-volume-up-fill]="!track.muted"></i>
             </button>
 
+            <!-- Solo -->
+            <button class="seq-solo" [class.seq-solo--on]="track.solo"
+                    (click)="toggleSolo(track.id)" title="Solo">
+              S
+            </button>
+
+            <!-- Pitch -->
+            <div class="seq-pitch">
+              <input class="seq-pitch-slider" type="range" min="-12" max="12" step="1"
+                     [value]="track.pitch"
+                     (input)="setTrackPitch(track.id, +$any($event.target).value)"
+                     [title]="'Pitch: ' + (track.pitch > 0 ? '+' : '') + track.pitch + ' st'">
+              <span class="seq-pitch-val">{{ track.pitch > 0 ? '+' : '' }}{{ track.pitch }}</span>
+            </div>
+
             <!-- Steps -->
             @for (step of track.steps; track $index; let si = $index) {
               <button class="seq-step"
+                      [class.seq-step--on]="step > 0"
                       [class.seq-step--beat1]="si % 4 < 2"
                       [class.seq-step--beat2]="si % 4 >= 2"
                       [class.seq-step--active]="visualStep() === si && seqPlaying()"
-                      [style.background]="step ? track.color : ''"
-                      [style.opacity]="step ? 0.85 : ''"
-                      [style.box-shadow]="step && visualStep() === si && seqPlaying() ? '0 0 10px ' + track.color : ''"
-                      (click)="toggleStep(track.id, si)">
+                      [style.background]="step > 0 ? track.color : ''"
+                      [style.opacity]="step > 0 ? (step === 1 ? 0.4 : step === 2 ? 0.65 : 0.9) : ''"
+                      [style.box-shadow]="step > 0 && visualStep() === si && seqPlaying() ? '0 0 10px ' + track.color : ''"
+                      [title]="step === 0 ? 'Off (right-click to set velocity)' : 'Vel: ' + (step === 1 ? 'Light' : step === 2 ? 'Medium' : 'Hard') + ' (right-click to change)'"
+                      (click)="toggleStep(track.id, si)"
+                      (contextmenu)="cycleVelocity($event, track.id, si)">
+                @if (step > 0) {
+                  <span class="seq-step-vel">{{ step === 1 ? 'L' : step === 2 ? 'M' : 'H' }}</span>
+                }
               </button>
             }
           </div>
@@ -297,6 +404,7 @@
               <option [value]="8">8</option>
               <option [value]="16">16</option>
               <option [value]="32">32</option>
+              <option [value]="64">64</option>
             </select>
           </div>
         </div>
@@ -411,6 +519,83 @@
       </div><!-- /bs-synth -->
 
     </div><!-- /bs-body -->
+
+    <!-- SAVE BEAT DIALOG -->
+    @if (showSaveDialog()) {
+      <div class="dialog-backdrop" (click)="closeSaveDialog()"></div>
+      <div class="dialog-modal" (click)="$event.stopPropagation()">
+        <div class="dialog-header">
+          <span class="dialog-title">Save Beat</span>
+          <button class="dialog-close" (click)="closeSaveDialog()">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+        <div class="dialog-body">
+          <div class="form-group">
+            <label for="beatName">Beat Name *</label>
+            <input id="beatName" type="text" class="form-input"
+                   [(ngModel)]="beatName"
+                   placeholder="My Awesome Beat">
+          </div>
+          <div class="form-group">
+            <label for="beatDesc">Description</label>
+            <textarea id="beatDesc" class="form-input"
+                      [(ngModel)]="beatDescription"
+                      placeholder="Optional beat description..."
+                      rows="3"></textarea>
+          </div>
+        </div>
+        <div class="dialog-footer">
+          <button class="dialog-btn dialog-btn--cancel" (click)="closeSaveDialog()">
+            Cancel
+          </button>
+          <button class="dialog-btn dialog-btn--primary"
+                  [disabled]="isSavingBeat()"
+                  (click)="saveBeat()">
+            {{ isSavingBeat() ? 'Saving...' : 'Save Beat' }}
+          </button>
+        </div>
+      </div>
+    }
+
+    <!-- LOAD BEAT DIALOG -->
+    @if (showLoadDialog()) {
+      <div class="dialog-backdrop" (click)="closeLoadDialog()"></div>
+      <div class="dialog-modal dialog-modal--large" (click)="$event.stopPropagation()">
+        <div class="dialog-header">
+          <span class="dialog-title">Load Beat</span>
+          <button class="dialog-close" (click)="closeLoadDialog()">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+        <div class="dialog-body dialog-body--scroll">
+          @if (isLoadingBeat()) {
+            <div class="loading-message">Loading beats...</div>
+          } @else if (beatService.beats().length === 0) {
+            <div class="empty-message">No beats found. Create and save your first beat!</div>
+          } @else {
+            <div class="beats-grid">
+              @for (beat of beatService.beats(); track beat._id) {
+                <div class="beat-card" (click)="loadBeat(beat)">
+                  <div class="beat-card-header">
+                    <h3 class="beat-card-title">{{ beat.name }}</h3>
+                    <span class="beat-card-meta">{{ beat.layers?.length || 1 }} layers</span>
+                  </div>
+                  @if (beat.description) {
+                    <div class="beat-card-desc">{{ beat.description }}</div>
+                  }
+                  <div class="beat-card-info">
+                    <span>BPM: {{ beat.bpm }}</span>
+                    <span>•</span>
+                    <span>{{ beat.category }}</span>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    }
 
   </div><!-- /bs-modal -->
 }

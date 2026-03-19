@@ -19,9 +19,11 @@ export interface DrumTrack {
   id:     string;
   name:   string;
   color:  string;
-  steps:  boolean[];
+  steps:  number[];   // 0=off, 1=light, 2=medium, 3=hard
   volume: number;
   muted:  boolean;
+  solo:   boolean;
+  pitch:  number;     // semitone offset -12 to +12
 }
 
 export interface PianoKey {

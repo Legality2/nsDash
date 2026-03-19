@@ -37,6 +37,13 @@ const seedDatabase = async () => {
       { name: 'music.delete', description: 'Delete music tracks', resource: 'music', action: 'delete' },
       { name: 'music.manage', description: 'Manage music module', resource: 'music', action: 'manage' },
 
+      // Beat permissions
+      { name: 'beats.create', description: 'Create beats', resource: 'beats', action: 'create' },
+      { name: 'beats.read', description: 'View beats', resource: 'beats', action: 'read' },
+      { name: 'beats.update', description: 'Update beats', resource: 'beats', action: 'update' },
+      { name: 'beats.delete', description: 'Delete beats', resource: 'beats', action: 'delete' },
+      { name: 'beats.manage', description: 'Manage beats and layers', resource: 'beats', action: 'manage' },
+
       // User/Roles permissions
       { name: 'users.read', description: 'View users', resource: 'users', action: 'read' },
       { name: 'users.create', description: 'Create users', resource: 'users', action: 'create' },
@@ -121,6 +128,11 @@ const seedDatabase = async () => {
           permMap['music.update'],
           permMap['music.delete'],
           permMap['music.manage'],
+          permMap['beats.read'],
+          permMap['beats.create'],
+          permMap['beats.update'],
+          permMap['beats.delete'],
+          permMap['beats.manage'],
           permMap['reports.read']
         ]
       },
@@ -136,6 +148,7 @@ const seedDatabase = async () => {
           permMap['finance.read'],
           permMap['fashion.read'],
           permMap['music.read'],
+          permMap['beats.read'],
           permMap['users.read'],
           permMap['reports.read'],
           permMap['reports.create'],
@@ -150,6 +163,7 @@ const seedDatabase = async () => {
           permMap['finance.read'],
           permMap['fashion.read'],
           permMap['music.read'],
+          permMap['beats.read'],
           permMap['reports.read']
         ]
       }
