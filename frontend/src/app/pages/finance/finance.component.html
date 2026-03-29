@@ -248,4 +248,410 @@
   <!-- File Manager -->
   <app-file-manager category="finance"></app-file-manager>
 
+  <!-- ═══════════════════════════════════════════════════════
+       CRYPTO TRADING BOTS
+  ════════════════════════════════════════════════════════ -->
+  <div class="trading-header page-enter-delay-4">
+    <div>
+      <h2 class="trading-title">Crypto <em>Trading Bots</em></h2>
+      <div class="pg-sub">Coinbase · Alpaca Markets · Automated Strategies</div>
+    </div>
+    <button class="pg-action" (click)="openBotForm()">
+      <i class="bi bi-robot"></i> New Bot
+    </button>
+  </div>
+
+  <!-- Exchange Connection Cards -->
+  <div class="exchange-grid page-enter-delay-4">
+
+    @for (ex of exchanges; track ex) {
+      @let cfg = exchangeConfig(ex);
+      <div class="exchange-card" [class.exchange-card--connected]="cfg?.hasCredentials">
+        <div class="exchange-card__logo">
+          @if (ex === 'coinbase') {
+            <span class="exlogo exlogo--cb"><i class="bi bi-currency-bitcoin"></i></span>
+          } @else {
+            <span class="exlogo exlogo--al"><i class="bi bi-bar-chart-steps"></i></span>
+          }
+        </div>
+        <div class="exchange-card__body">
+          <div class="exchange-card__name">
+            {{ ex === 'coinbase' ? 'Coinbase Advanced Trade' : 'Alpaca Markets' }}
+          </div>
+          <div class="exchange-card__meta">
+            @if (cfg?.hasCredentials) {
+              <span class="conn-badge conn-badge--ok"><span class="conn-dot"></span>Credentials set</span>
+            } @else {
+              <span class="conn-badge conn-badge--no"><span class="conn-dot"></span>No credentials</span>
+            }
+          </div>
+          <div class="exchange-card__hint">
+            @if (cfg?.keyHint) {
+              Stored key: {{ cfg?.keyHint }}
+            } @else {
+              Add your personal API keys below
+            }
+          </div>
+          <div class="exchange-creds">
+            <input
+              class="form-input"
+              type="text"
+              [placeholder]="ex === 'coinbase' ? 'Coinbase API Key' : 'Alpaca API Key'"
+              [(ngModel)]="exchangeCreds[ex].apiKey"
+            >
+            <input
+              class="form-input"
+              type="password"
+              [placeholder]="ex === 'coinbase' ? 'Coinbase API Secret' : 'Alpaca API Secret'"
+              [(ngModel)]="exchangeCreds[ex].apiSecret"
+            >
+            @if (ex === 'coinbase') {
+              <input
+                class="form-input"
+                type="password"
+                placeholder="Passphrase (optional)"
+                [(ngModel)]="exchangeCreds[ex].passphrase"
+              >
+            }
+            @if (exchangeCreds[ex].error) {
+              <div class="exchange-creds__error">{{ exchangeCreds[ex].error }}</div>
+            }
+            <div class="exchange-creds__actions">
+              <button class="btn-primary" [disabled]="exchangeCreds[ex].saving" (click)="saveExchangeCredentials(ex)">
+                <i class="bi bi-shield-lock"></i>
+                {{ exchangeCreds[ex].saving ? 'Saving...' : 'Save Keys' }}
+              </button>
+              @if (cfg?.hasCredentials) {
+                <button class="btn-ghost" [disabled]="exchangeCreds[ex].clearing" (click)="clearExchangeCredentials(ex)">
+                  {{ exchangeCreds[ex].clearing ? 'Removing...' : 'Remove Keys' }}
+                </button>
+              }
+            </div>
+          </div>
+        </div>
+        <div class="exchange-card__env">
+          <span class="env-label">Mode</span>
+          <button class="env-toggle"
+            [class.env-toggle--live]="cfg?.environment === 'live'"
+            (click)="toggleExchangeEnv(ex)">
+            {{ cfg?.environment === 'live' ? 'LIVE' : 'SANDBOX' }}
+          </button>
+          @if (ex === 'alpaca' && cfg?.environment === 'sandbox') {
+            <div style="font-family:'DM Mono',monospace;font-size:0.55rem;color:var(--muted);margin-top:3px">paper-api.alpaca.markets</div>
+          }
+        </div>
+      </div>
+    }
+
+  </div>
+
+  <!-- Create Bot Form (inline, collapsible) -->
+  @if (showBotForm()) {
+    <div class="panel bot-form-panel page-enter-delay-4">
+      <div class="panel__head">
+        <span class="panel__title"><i class="bi bi-robot" style="margin-right:6px"></i>Configure New Bot</span>
+        <button class="panel__action" (click)="closeBotForm()"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="panel__body bot-form">
+
+        <!-- Row 1: Name + Exchange -->
+        <div class="form-row">
+          <div class="form-field form-field--grow">
+            <label class="form-label">Bot Name</label>
+            <input class="form-input" type="text" placeholder="e.g. BTC Momentum Bot"
+                   [(ngModel)]="botForm.name">
+          </div>
+          <div class="form-field">
+            <label class="form-label">Exchange</label>
+            <select class="form-select" [(ngModel)]="botForm.exchange" (ngModelChange)="onExchangeChange()">
+              <option value="coinbase">Coinbase</option>
+              <option value="alpaca">Alpaca Markets</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label class="form-label">Asset Type</label>
+            <select class="form-select" [(ngModel)]="botForm.assetType"
+                    [disabled]="botForm.exchange === 'coinbase'">
+              <option value="crypto">Crypto</option>
+              <option value="stock" [disabled]="botForm.exchange === 'coinbase'">Stock</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Row 2: Pair quick-picks + input -->
+        <div class="form-field" style="margin-bottom:18px">
+          <label class="form-label">Trading Pair</label>
+          <div class="pair-row">
+            <input class="form-input pair-input" type="text" placeholder="BTC-USD"
+                   [(ngModel)]="botForm.pair" style="text-transform:uppercase">
+            <div class="pair-chips">
+              @for (p of suggestedPairs; track p) {
+                <button class="pair-chip" [class.pair-chip--active]="botForm.pair === p"
+                        (click)="botForm.pair = p">{{ p }}</button>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- Strategy selector cards -->
+        <div class="form-field" style="margin-bottom:18px">
+          <label class="form-label">Strategy</label>
+          <div class="strategy-grid">
+            @for (s of strategies; track s.id) {
+              <button class="strategy-card"
+                      [class.strategy-card--active]="botForm.strategy === s.id"
+                      (click)="botForm.strategy = s.id">
+                <i class="bi {{ s.icon }} strategy-card__icon"></i>
+                <div class="strategy-card__name">{{ s.label }}</div>
+                <div class="strategy-card__desc">{{ s.desc }}</div>
+              </button>
+            }
+          </div>
+        </div>
+
+        <!-- Strategy-specific parameters -->
+        <div class="form-row strategy-params">
+          @if (botForm.strategy === 'ma_crossover') {
+            <div class="form-field">
+              <label class="form-label">Fast EMA Period</label>
+              <input class="form-input" type="number" min="2" max="50" [(ngModel)]="botForm.fastPeriod">
+            </div>
+            <div class="form-field">
+              <label class="form-label">Slow EMA Period</label>
+              <input class="form-input" type="number" min="5" max="200" [(ngModel)]="botForm.slowPeriod">
+            </div>
+          }
+          @if (botForm.strategy === 'rsi_reversal') {
+            <div class="form-field">
+              <label class="form-label">RSI Period</label>
+              <input class="form-input" type="number" min="2" max="50" [(ngModel)]="botForm.rsiPeriod">
+            </div>
+            <div class="form-field">
+              <label class="form-label">Oversold &lt;</label>
+              <input class="form-input" type="number" min="10" max="40" [(ngModel)]="botForm.rsiOversold">
+            </div>
+            <div class="form-field">
+              <label class="form-label">Overbought &gt;</label>
+              <input class="form-input" type="number" min="60" max="90" [(ngModel)]="botForm.rsiOverbought">
+            </div>
+          }
+          @if (botForm.strategy === 'macd') {
+            <div class="form-field">
+              <label class="form-label">Fast Period</label>
+              <input class="form-input" type="number" min="2" max="50" [(ngModel)]="botForm.macdFast">
+            </div>
+            <div class="form-field">
+              <label class="form-label">Slow Period</label>
+              <input class="form-input" type="number" min="5" max="100" [(ngModel)]="botForm.macdSlow">
+            </div>
+            <div class="form-field">
+              <label class="form-label">Signal Period</label>
+              <input class="form-input" type="number" min="2" max="50" [(ngModel)]="botForm.macdSignal">
+            </div>
+          }
+          @if (botForm.strategy === 'bollinger') {
+            <div class="form-field">
+              <label class="form-label">Band Period</label>
+              <input class="form-input" type="number" min="5" max="100" [(ngModel)]="botForm.bbPeriod">
+            </div>
+            <div class="form-field">
+              <label class="form-label">Std Deviations</label>
+              <input class="form-input" type="number" min="1" max="4" step="0.5" [(ngModel)]="botForm.bbStdDev">
+            </div>
+          }
+          @if (botForm.strategy === 'dca') {
+            <div class="form-field">
+              <label class="form-label">DCA Amount ($)</label>
+              <input class="form-input" type="number" min="10" [(ngModel)]="botForm.dcaAmount">
+            </div>
+            <div class="form-field">
+              <label class="form-label">Interval</label>
+              <select class="form-select" [(ngModel)]="botForm.dcaInterval">
+                <option value="hourly">Hourly</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+              </select>
+            </div>
+          }
+        </div>
+
+        <!-- Risk management -->
+        <div class="risk-section">
+          <div class="form-section-label"><i class="bi bi-shield-check"></i>Risk Management</div>
+          <div class="form-row">
+            <div class="form-field">
+              <label class="form-label">Position Size ($)</label>
+              <input class="form-input" type="number" min="10" [(ngModel)]="botForm.positionSize">
+            </div>
+            <div class="form-field">
+              <label class="form-label">Stop Loss (%)</label>
+              <input class="form-input" type="number" min="0.5" max="50" step="0.5" [(ngModel)]="botForm.stopLoss">
+            </div>
+            <div class="form-field">
+              <label class="form-label">Take Profit (%)</label>
+              <input class="form-input" type="number" min="0.5" max="200" step="0.5" [(ngModel)]="botForm.takeProfit">
+            </div>
+            <div class="form-field">
+              <label class="form-label">Max Open Trades</label>
+              <input class="form-input" type="number" min="1" max="20" [(ngModel)]="botForm.maxOpenTrades">
+            </div>
+          </div>
+        </div>
+
+        @if (botFormError()) {
+          <div class="exc-error"><i class="bi bi-exclamation-circle"></i>{{ botFormError() }}</div>
+        }
+
+        <div class="form-actions">
+          <button class="btn-ghost" (click)="closeBotForm()">Cancel</button>
+          <button class="btn-primary" (click)="submitBotForm()" [disabled]="botFormLoading()">
+            @if (botFormLoading()) {
+              <span class="exc-spinner"></span>Creating…
+            } @else {
+              <i class="bi bi-robot"></i>Create Bot
+            }
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+  <!-- Active Bots Table -->
+  <div class="panel page-enter-delay-4" style="margin-bottom:20px">
+    <div class="panel__head">
+      <span class="panel__title"><i class="bi bi-cpu" style="margin-right:6px"></i>Active Bots
+        <span class="bot-count">{{ tradingBots().length }}</span>
+      </span>
+      @if (!showBotForm()) {
+        <button class="panel__action" (click)="openBotForm()">+ New Bot</button>
+      }
+    </div>
+    <div class="panel__body" style="padding:0 24px">
+      @if (tradingBots().length === 0) {
+        <div class="empty-state">
+          <i class="bi bi-robot empty-state__icon"></i>
+          <div>No bots configured yet</div>
+          <div style="font-size:0.72rem;color:var(--muted);margin-top:4px">Click "+ New Bot" to create your first trading bot</div>
+        </div>
+      } @else {
+        <table class="data-table bot-table">
+          <thead>
+            <tr>
+              <th>Status</th><th>Bot</th><th>Exchange</th>
+              <th>Pair</th><th>Strategy</th>
+              <th>Trades</th><th>PnL</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (bot of tradingBots(); track bot._id) {
+              <tr>
+                <td>
+                  <span class="status-dot"
+                    [class.status-dot--running]="bot.status === 'running'"
+                    [class.status-dot--paused]="bot.status === 'paused'"
+                    [class.status-dot--error]="bot.status === 'error'"
+                    [title]="bot.status">
+                  </span>
+                </td>
+                <td style="font-weight:600">{{ bot.name }}</td>
+                <td>
+                  <span class="exch-badge" [class.exch-badge--cb]="bot.exchange === 'coinbase'"
+                        [class.exch-badge--al]="bot.exchange === 'alpaca'">
+                    {{ bot.exchange === 'coinbase' ? 'CB' : 'ALP' }}
+                  </span>
+                </td>
+                <td><span class="ticker-symbol">{{ bot.pair }}</span></td>
+                <td>
+                  <span class="strategy-badge strategy-badge--{{ bot.strategy }}">
+                    {{ strategyLabel(bot.strategy) }}
+                  </span>
+                </td>
+                <td style="font-family:'DM Mono',monospace">{{ bot.performance.totalTrades ?? 0 }}</td>
+                <td>
+                  <span class="pnl-value" [ngClass]="pnlClass(bot.performance.totalPnl ?? 0)">
+                    {{ (bot.performance.totalPnl ?? 0) >= 0 ? '+' : '' }}${{ bot.performance.totalPnl?.toFixed(2) ?? '0.00' }}
+                  </span>
+                </td>
+                <td>
+                  <div class="bot-actions" [class.bot-actions--loading]="botActionLoading() === bot._id">
+                    @if (bot.status !== 'running') {
+                      <button class="bot-btn bot-btn--run" title="Start" (click)="startBot(bot)">
+                        <i class="bi bi-play-fill"></i>
+                      </button>
+                    }
+                    @if (bot.status === 'running') {
+                      <button class="bot-btn bot-btn--pause" title="Pause" (click)="pauseBot(bot)">
+                        <i class="bi bi-pause-fill"></i>
+                      </button>
+                    }
+                    @if (bot.status !== 'idle') {
+                      <button class="bot-btn bot-btn--stop" title="Stop" (click)="stopBot(bot)">
+                        <i class="bi bi-stop-fill"></i>
+                      </button>
+                    }
+                    <button class="bot-btn bot-btn--del" title="Delete" (click)="deleteBot(bot)">
+                      <i class="bi bi-trash3"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  </div>
+
+  <!-- Recent Bot Orders -->
+  <div class="panel page-enter-delay-4" style="margin-bottom:40px">
+    <div class="panel__head">
+      <span class="panel__title"><i class="bi bi-receipt" style="margin-right:6px"></i>Bot Order History</span>
+    </div>
+    <div class="panel__body" style="padding:0 24px">
+      @if (botOrders().length === 0) {
+        <div class="empty-state" style="padding:28px 0">
+          <i class="bi bi-receipt empty-state__icon"></i>
+          <div>No orders yet — start a bot to begin trading</div>
+        </div>
+      } @else {
+        <table class="data-table">
+          <thead>
+            <tr><th>Time</th><th>Bot</th><th>Pair</th><th>Side</th><th>Amount</th><th>Price</th><th>Signal</th><th>PnL</th><th>Status</th></tr>
+          </thead>
+          <tbody>
+            @for (o of botOrders(); track o._id) {
+              <tr>
+                <td style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted)">
+                  {{ o.createdAt | date:'MMM d, HH:mm' }}
+                </td>
+                <td style="font-size:0.78rem">{{ o.botName }}</td>
+                <td><span class="ticker-symbol">{{ o.pair }}</span></td>
+                <td>
+                  <span class="tag" [ngClass]="o.side === 'buy' ? 'tag--up' : 'tag--down'">
+                    {{ o.side | uppercase }}
+                  </span>
+                </td>
+                <td style="font-family:'DM Mono',monospace">${{ o.amount | number:'1.0-0' }}</td>
+                <td style="font-family:'DM Mono',monospace">${{ o.price | number:'1.2-2' }}</td>
+                <td style="font-size:0.72rem;color:var(--muted)">{{ o.signal || '—' }}</td>
+                <td>
+                  <span class="pnl-value" [ngClass]="pnlClass(o.pnl)">
+                    {{ o.pnl >= 0 ? '+' : '' }}${{ o.pnl.toFixed(2) }}
+                  </span>
+                </td>
+                <td>
+                  <span class="tag"
+                    [ngClass]="o.status === 'filled' ? 'tag--up' : o.status === 'cancelled' ? 'tag--down' : ''">
+                    {{ o.status }}
+                  </span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  </div>
+
 </section>

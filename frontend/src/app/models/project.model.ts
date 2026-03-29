@@ -1,3 +1,9 @@
+export interface ProjectAccessEntry {
+  user: { _id: string; username: string; email: string };
+  permission: 'view' | 'edit';
+  grantedAt?: string;
+}
+
 export interface Project {
   _id: string;
   name: string;
@@ -6,6 +12,8 @@ export interface Project {
   priority: 'low' | 'medium' | 'high' | 'critical';
   owner: { _id: string; username: string; email: string };
   teamMembers: { _id: string; username: string; email: string }[];
+  visibility: 'private' | 'public';
+  accessList: ProjectAccessEntry[];
   startDate?: Date;
   endDate?: Date;
   budget?: number;

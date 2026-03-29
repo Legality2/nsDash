@@ -3,31 +3,56 @@ import {
   ViewChild, ElementRef,
   inject, signal, computed, effect,
 } from '@angular/core';
-import { DecimalPipe, DatePipe, NgClass } from '@angular/common';
+import { DecimalPipe, DatePipe, NgClass, UpperCasePipe } from '@angular/common';
+import { FormsModule }                    from '@angular/forms';
 import { Chart, registerables }           from 'chart.js';
 import { ApiService }                     from '../../services/api.service';
 import { Portfolio, Ticker, Transaction, ExcelParseResult } from '../../models/finance.model';
+import {
+  TradingBot, BotOrder, ExchangeConfig, BotFormData,
+  Strategy, Exchange, AssetType,
+} from '../../models/trading.model';
 import { StatCardComponent }    from '../../shared/stat-card/stat-card.component';
 import { FileManagerComponent } from '../../shared/file-manager/file-manager.component';
 
 Chart.register(...registerables);
 
+const DEFAULT_FORM: BotFormData = {
+  name: '', exchange: 'coinbase', assetType: 'crypto', pair: 'BTC-USD',
+  strategy: 'ma_crossover',
+  fastPeriod: 10, slowPeriod: 20,
+  rsiPeriod: 14, rsiOversold: 30, rsiOverbought: 70,
+  macdFast: 12, macdSlow: 26, macdSignal: 9,
+  bbPeriod: 20, bbStdDev: 2,
+  dcaAmount: 100, dcaInterval: 'daily',
+  positionSize: 500, stopLoss: 2, takeProfit: 4, maxOpenTrades: 3,
+};
+
+type ExchangeCredentialForm = {
+  apiKey: string;
+  apiSecret: string;
+  passphrase: string;
+  saving: boolean;
+  clearing: boolean;
+  error: string | null;
+};
+
 @Component({
   selector: 'app-finance',
   standalone: true,
-  imports: [DecimalPipe, DatePipe, NgClass, StatCardComponent, FileManagerComponent],
+  imports: [DecimalPipe, DatePipe, NgClass, UpperCasePipe, FormsModule, StatCardComponent, FileManagerComponent],
   templateUrl: './finance.component.html',
   styleUrls: ['./finance.component.scss'],
 })
 export class FinanceComponent implements OnInit, AfterViewInit, OnDestroy {
   private api = inject(ApiService);
 
-  /* DB signals */
+  /* ── DB signals ── */
   portfolio    = signal<Portfolio | null>(null);
   tickers      = signal<Ticker[]>([]);
   transactions = signal<Transaction[]>([]);
 
-  /* Excel / source signals */
+  /* ── Excel / source signals ── */
   dataSource        = signal<'db' | 'excel'>('db');
   excelTickers      = signal<Partial<Ticker>[]>([]);
   excelTransactions = signal<Partial<Transaction>[]>([]);
@@ -36,7 +61,7 @@ export class FinanceComponent implements OnInit, AfterViewInit, OnDestroy {
   excelError        = signal<string | null>(null);
   isDragging        = signal(false);
 
-  /* Computed active data */
+  /* ── Computed active data ── */
   displayTickers = computed<Partial<Ticker>[]>(() =>
     this.dataSource() === 'excel' && this.excelTickers().length
       ? this.excelTickers()
@@ -48,7 +73,7 @@ export class FinanceComponent implements OnInit, AfterViewInit, OnDestroy {
       : this.transactions()
   );
 
-  /* Chart refs */
+  /* ── Chart refs ── */
   @ViewChild('priceChartCanvas')  priceRef!:  ElementRef<HTMLCanvasElement>;
   @ViewChild('sectorChartCanvas') sectorRef!: ElementRef<HTMLCanvasElement>;
   @ViewChild('txChartCanvas')     txRef!:     ElementRef<HTMLCanvasElement>;
@@ -59,7 +84,6 @@ export class FinanceComponent implements OnInit, AfterViewInit, OnDestroy {
   private chartsReady = false;
 
   constructor() {
-    // Re-render whenever active data changes
     effect(() => {
       void this.displayTickers();
       void this.portfolio();
@@ -68,10 +92,59 @@ export class FinanceComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
+  /* ══════════════════════════════════════════════════════════
+     TRADING BOT STATE
+  ══════════════════════════════════════════════════════════ */
+
+  exchangeConfigs  = signal<ExchangeConfig[]>([]);
+  tradingBots      = signal<TradingBot[]>([]);
+  botOrders        = signal<BotOrder[]>([]);
+
+  showBotForm      = signal(false);
+  botFormLoading   = signal(false);
+  botFormError     = signal<string | null>(null);
+  botActionLoading = signal<string | null>(null);   // botId currently being acted on
+
+  /* Mutable form object — bound via ngModel */
+  botForm: BotFormData = { ...DEFAULT_FORM };
+
+  exchangeCreds: Record<Exchange, ExchangeCredentialForm> = {
+    coinbase: { apiKey: '', apiSecret: '', passphrase: '', saving: false, clearing: false, error: null },
+    alpaca:   { apiKey: '', apiSecret: '', passphrase: '', saving: false, clearing: false, error: null },
+  };
+
+  readonly exchanges: Exchange[] = ['coinbase', 'alpaca'];
+
+  /* Pair quick-picks based on selected exchange/assetType */
+  get suggestedPairs(): string[] {
+    if (this.botForm.exchange === 'coinbase') {
+      return ['BTC-USD', 'ETH-USD', 'SOL-USD', 'AVAX-USD', 'LINK-USD', 'DOGE-USD'];
+    }
+    if (this.botForm.assetType === 'crypto') {
+      return ['BTCUSD', 'ETHUSD', 'SOLUSD', 'DOGEUSD'];
+    }
+    return ['AAPL', 'TSLA', 'NVDA', 'SPY', 'QQQ', 'AMZN', 'MSFT'];
+  }
+
+  /* Strategy metadata */
+  readonly strategies: { id: Strategy; label: string; desc: string; icon: string }[] = [
+    { id: 'ma_crossover', label: 'MA Crossover',   icon: 'bi-arrow-left-right',       desc: 'Buy on EMA golden cross, sell on death cross' },
+    { id: 'rsi_reversal', label: 'RSI Reversal',   icon: 'bi-activity',               desc: 'Enter oversold (<30), exit overbought (>70)' },
+    { id: 'macd',         label: 'MACD',           icon: 'bi-graph-up-arrow',         desc: 'Trade MACD line/signal line crossovers' },
+    { id: 'bollinger',    label: 'Bollinger Bands',icon: 'bi-distribute-horizontal',  desc: 'Buy at lower band, sell at upper band' },
+    { id: 'dca',          label: 'DCA',            icon: 'bi-calendar-check',         desc: 'Invest a fixed amount at regular intervals' },
+  ];
+
+  strategyLabel(s: string): string {
+    return this.strategies.find(x => x.id === s)?.label ?? s;
+  }
+
+  /* ── Init / destroy ── */
   ngOnInit() {
     this.api.getPortfolio()    .subscribe({ next: d => this.portfolio.set(d)    });
     this.api.getTickers()      .subscribe({ next: d => this.tickers.set(d)      });
     this.api.getTransactions() .subscribe({ next: d => this.transactions.set(d) });
+    this.loadTradingData();
   }
 
   ngAfterViewInit() {
@@ -85,10 +158,168 @@ export class FinanceComponent implements OnInit, AfterViewInit, OnDestroy {
     this.txChart?.destroy();
   }
 
-  /* Data source */
+  /* ── Trading data ── */
+  loadTradingData() {
+    this.api.getExchangeConfigs().subscribe({ next: d => this.exchangeConfigs.set(d) });
+    this.api.getTradingBots()   .subscribe({ next: d => this.tradingBots.set(d)      });
+    this.api.getBotOrders()     .subscribe({ next: d => this.botOrders.set(d)        });
+  }
+
+  exchangeConfig(ex: string): ExchangeConfig | undefined {
+    return this.exchangeConfigs().find(c => c.exchange === ex);
+  }
+
+  /* ── Exchange environment toggle ── */
+  toggleExchangeEnv(ex: string) {
+    const cfg = this.exchangeConfig(ex);
+    const env = cfg?.environment === 'live' ? 'sandbox' : 'live';
+    this.api.saveExchangeConfig(ex, env, cfg?.label ?? '').subscribe({
+      next: updated => this.exchangeConfigs.update(list =>
+        list.map(c => c.exchange === ex ? { ...c, ...updated } : c)
+      ),
+    });
+  }
+
+  saveExchangeCredentials(ex: Exchange) {
+    const form = this.exchangeCreds[ex];
+    form.error = null;
+
+    if (!form.apiKey.trim() || !form.apiSecret.trim()) {
+      form.error = 'API key and secret are required';
+      return;
+    }
+
+    form.saving = true;
+    this.api.saveExchangeCredentials(ex, form.apiKey.trim(), form.apiSecret.trim(), form.passphrase.trim() || undefined).subscribe({
+      next: ({ config }) => {
+        this.exchangeConfigs.update(list => list.map(c => c.exchange === ex ? { ...c, ...config } : c));
+        form.apiSecret = '';
+        form.passphrase = '';
+        form.saving = false;
+      },
+      error: (err) => {
+        form.error = err?.error?.error ?? 'Failed to save API credentials';
+        form.saving = false;
+      },
+    });
+  }
+
+  clearExchangeCredentials(ex: Exchange) {
+    const form = this.exchangeCreds[ex];
+    form.error = null;
+    form.clearing = true;
+
+    this.api.clearExchangeCredentials(ex).subscribe({
+      next: ({ config }) => {
+        this.exchangeConfigs.update(list => list.map(c => c.exchange === ex ? { ...c, ...config } : c));
+        form.apiKey = '';
+        form.apiSecret = '';
+        form.passphrase = '';
+        form.clearing = false;
+      },
+      error: (err) => {
+        form.error = err?.error?.error ?? 'Failed to clear API credentials';
+        form.clearing = false;
+      },
+    });
+  }
+
+  /* ── Bot form ── */
+  openBotForm()  { this.botForm = { ...DEFAULT_FORM }; this.botFormError.set(null); this.showBotForm.set(true); }
+  closeBotForm() { this.showBotForm.set(false); this.botFormError.set(null); }
+
+  onExchangeChange() {
+    // Reset pair to a sensible default when exchange changes
+    this.botForm.pair = this.suggestedPairs[0];
+    if (this.botForm.exchange === 'coinbase') this.botForm.assetType = 'crypto';
+  }
+
+  submitBotForm() {
+    if (!this.botForm.name.trim()) { this.botFormError.set('Bot name is required'); return; }
+    if (!this.botForm.pair.trim()) { this.botFormError.set('Trading pair is required'); return; }
+
+    this.botFormLoading.set(true);
+    this.botFormError.set(null);
+
+    const { name, exchange, assetType, pair, strategy,
+            fastPeriod, slowPeriod, rsiPeriod, rsiOversold, rsiOverbought,
+            macdFast, macdSlow, macdSignal, bbPeriod, bbStdDev,
+            dcaAmount, dcaInterval, positionSize, stopLoss, takeProfit, maxOpenTrades } = this.botForm;
+
+    const payload = {
+      name, exchange, assetType, pair: pair.toUpperCase(), strategy,
+      params: {
+        fastPeriod, slowPeriod, rsiPeriod, rsiOversold, rsiOverbought,
+        macdFast, macdSlow, macdSignal, bbPeriod, bbStdDev,
+        dcaAmount, dcaInterval, positionSize, stopLoss, takeProfit, maxOpenTrades,
+      },
+    };
+
+    this.api.createTradingBot(payload).subscribe({
+      next: bot => {
+        this.tradingBots.update(list => [bot, ...list]);
+        this.botFormLoading.set(false);
+        this.closeBotForm();
+      },
+      error: err => {
+        this.botFormError.set(err?.error?.error ?? 'Failed to create bot');
+        this.botFormLoading.set(false);
+      },
+    });
+  }
+
+  /* ── Bot controls ── */
+  startBot(bot: TradingBot) {
+    this.botActionLoading.set(bot._id);
+    this.api.setBotStatus(bot._id, 'running').subscribe({
+      next: updated => {
+        this.tradingBots.update(list => list.map(b => b._id === updated._id ? updated : b));
+        this.botActionLoading.set(null);
+      },
+      error: () => this.botActionLoading.set(null),
+    });
+  }
+
+  pauseBot(bot: TradingBot) {
+    this.botActionLoading.set(bot._id);
+    this.api.setBotStatus(bot._id, 'paused').subscribe({
+      next: updated => {
+        this.tradingBots.update(list => list.map(b => b._id === updated._id ? updated : b));
+        this.botActionLoading.set(null);
+      },
+      error: () => this.botActionLoading.set(null),
+    });
+  }
+
+  stopBot(bot: TradingBot) {
+    this.botActionLoading.set(bot._id);
+    this.api.setBotStatus(bot._id, 'idle').subscribe({
+      next: updated => {
+        this.tradingBots.update(list => list.map(b => b._id === updated._id ? updated : b));
+        this.botActionLoading.set(null);
+      },
+      error: () => this.botActionLoading.set(null),
+    });
+  }
+
+  deleteBot(bot: TradingBot) {
+    this.botActionLoading.set(bot._id);
+    this.api.deleteTradingBot(bot._id).subscribe({
+      next: () => {
+        this.tradingBots.update(list => list.filter(b => b._id !== bot._id));
+        this.botOrders.update(list => list.filter(o => o.botId !== bot._id));
+        this.botActionLoading.set(null);
+      },
+      error: () => this.botActionLoading.set(null),
+    });
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     EXISTING DATA SOURCE / EXCEL
+  ══════════════════════════════════════════════════════════ */
+
   setSource(src: 'db' | 'excel') { this.dataSource.set(src); }
 
-  /* Excel upload */
   onDragOver(e: DragEvent)  { e.preventDefault(); this.isDragging.set(true); }
   onDragLeave(e: DragEvent) {
     if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) {
@@ -131,7 +362,10 @@ export class FinanceComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  /* Chart rendering */
+  /* ══════════════════════════════════════════════════════════
+     CHARTS
+  ══════════════════════════════════════════════════════════ */
+
   private renderAll() {
     this.renderPriceChart();
     this.renderSectorChart();
@@ -234,7 +468,6 @@ export class FinanceComponent implements OnInit, AfterViewInit, OnDestroy {
     const txns = this.displayTransactions();
     if (!txns.length) return;
 
-    // Group by month
     const months: Record<string, { buy: number; sell: number }> = {};
     for (const tx of txns) {
       const key = new Date(tx.date ?? Date.now())
@@ -305,11 +538,14 @@ export class FinanceComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  /* Helpers */
+  /* ══════════════════════════════════════════════════════════
+     HELPERS
+  ══════════════════════════════════════════════════════════ */
+
   news = [
-    { source: 'Reuters · 14m',   title: 'Fed signals possible rate pause through Q2'         },
-    { source: 'Bloomberg · 1h',  title: 'AI chip demand propels NVIDIA to record highs'       },
-    { source: 'WSJ · 2h',        title: 'Dollar strengthens amid geopolitical tensions'       },
+    { source: 'Reuters · 14m',   title: 'Fed signals possible rate pause through Q2'   },
+    { source: 'Bloomberg · 1h',  title: 'AI chip demand propels NVIDIA to record highs' },
+    { source: 'WSJ · 2h',        title: 'Dollar strengthens amid geopolitical tensions' },
   ];
 
   formatMoney(n: number): string {
@@ -333,5 +569,9 @@ export class FinanceComponent implements OnInit, AfterViewInit, OnDestroy {
       Consumer: 'var(--accent-gold)', Energy: '#e76f51', Other: 'var(--muted)',
     };
     return map[name] ?? '#888';
+  }
+
+  pnlClass(n: number): string {
+    return n > 0 ? 'pnl--up' : n < 0 ? 'pnl--down' : '';
   }
 }

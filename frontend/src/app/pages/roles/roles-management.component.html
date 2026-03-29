@@ -54,7 +54,7 @@
                 </div>
 
                 <div class="role-card__permissions">
-                  <div class="perms-label">Permissions ({{ role.permissions?.length || 0 }})</div>
+                  <div class="perms-label">Permissions ({{ role.permissions.length || 0 }})</div>
                   <div class="perms-list">
                     @let permView = getPermissionView(role.permissions);
                     @for (perm of permView.displayed; track perm._id) {

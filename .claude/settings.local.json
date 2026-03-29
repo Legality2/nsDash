@@ -23,7 +23,10 @@
       "Bash(npx ng build)",
       "Bash(where npm.cmd)",
       "Bash(where npx.cmd)",
-      "Bash(node -e \"console.log\\(process.platform, process.env.ComSpec\\)\")"
+      "Bash(node -e \"console.log\\(process.platform, process.env.ComSpec\\)\")",
+      "Bash(grep -r \"trading\\\\|exchange\\\\|algorithm\\\\|backtest\" /c/Users/newma/Documents/DevV2/nexus/nsDash --include=*.js --include=*.ts)",
+      "Bash(find /c/Users/newma/Documents/DevV2/nexus/nsDash -not -path */node_modules/* -type d)",
+      "Bash(find /c/Users/newma/Documents/DevV2/nexus/nsDash/backend -type f -path *models*photo* -o -path *models*Photo*)"
     ]
   }
 }

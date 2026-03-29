@@ -21,6 +21,11 @@ router.get(
 );
 
 router.get(
+  '/users/search',
+  projectCtrl.searchProjectUsers,
+);
+
+router.get(
   '/:id',
   validateObjectIds('id'),
   projectCtrl.getProjectById,
@@ -58,6 +63,20 @@ router.delete(
   validateObjectIds('id'),
   requirePermission('projects', 'manage'),
   projectCtrl.removeTeamMember,
+);
+
+router.post(
+  '/:id/access',
+  validateObjectIds('id'),
+  requirePermission('projects', 'manage'),
+  projectCtrl.grantProjectAccess,
+);
+
+router.delete(
+  '/:id/access',
+  validateObjectIds('id'),
+  requirePermission('projects', 'manage'),
+  projectCtrl.revokeProjectAccess,
 );
 
 /* ─────────────────────────────────────────────

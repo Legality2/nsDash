@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy, inject, signal, computed, HostListener } from '@angular/core';
-import { NgClass, CommonModule } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService }           from '../../services/api.service';
 import { MusicStats, Track }    from '../../models/music.model';
@@ -12,7 +12,7 @@ import { BeatService, Beat, BeatLayer } from '../../services/beat.service';
 @Component({
   selector: 'app-music',
   standalone: true,
-  imports: [NgClass, CommonModule, FormsModule, StatCardComponent, FileManagerComponent],
+  imports: [CommonModule, FormsModule, StatCardComponent, FileManagerComponent],
   templateUrl: './music.component.html',
   styleUrls: ['./music.component.scss'],
 })

@@ -17,6 +17,7 @@ import musicRouter   from './routes/music.routes.js';
 import statsRouter   from './routes/stats.routes.js';
 import filesRouter   from './routes/files.routes.js';
 import photosRouter  from './routes/photos.routes.js';
+import tradingRouter from './routes/trading.routes.js';
 import { verifyToken } from './middleware/auth.middleware.js';
 
 /* ── Guard: require critical env vars before starting ── */
@@ -31,6 +32,11 @@ if (process.env.JWT_SECRET.length < 32) {
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
+const MONGODB_URI = (process.env.MONGODB_URI || '').trim() || 'mongodb://127.0.0.1:27017/nexus_dashboard';
+
+if (!process.env.MONGODB_URI || !process.env.MONGODB_URI.trim()) {
+  console.warn('⚠️  MONGODB_URI is not set. Falling back to mongodb://127.0.0.1:27017/nexus_dashboard');
+}
 
 /* ── Security: Helmet — sets hardened HTTP response headers ── */
 app.use(helmet({
@@ -109,6 +115,7 @@ app.use('/api/music',    verifyToken, musicRouter);
 app.use('/api/stats',    verifyToken, statsRouter);
 app.use('/api/files',    verifyToken, filesRouter);   // all file routes now require auth
 app.use('/api/photos',   verifyToken, photosRouter);
+app.use('/api/trading',  verifyToken, tradingRouter);
 
 /* ── Health check (public, rate-limited separately) ── */
 app.get('/api/health', (_req, res) =>
@@ -141,7 +148,7 @@ app.use((err, req, res, _next) => {
 
 /* ── MongoDB + Listen ── */
 mongoose
-  .connect(process.env.MONGODB_URI, {
+  .connect(MONGODB_URI, {
     serverSelectionTimeoutMS: 5000,
     socketTimeoutMS: 45000,
   })

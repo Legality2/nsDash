@@ -6,6 +6,12 @@ import { Project, Task, ProjectStats, PaginationMeta } from '../models/project.m
 
 export type { Project, Task, ProjectStats, PaginationMeta };
 
+export interface ProjectUserOption {
+  _id: string;
+  username: string;
+  email: string;
+}
+
 /* ── Service ── */
 @Injectable({ providedIn: 'root' })
 export class ProjectService {
@@ -132,6 +138,50 @@ export class ProjectService {
         );
         this.projects$.next([...this.projects()]);
       })
+    );
+  }
+
+  grantProjectAccess(
+    projectId: string,
+    userId: string,
+    permission: 'view' | 'edit'
+  ): Observable<{ success: boolean; data: Project }> {
+    return this.http.post<any>(`${this.apiUrl}/${projectId}/access`, { userId, permission }).pipe(
+      tap(res => {
+        this.projects.update(projects =>
+          projects.map(p => p._id === projectId ? res.data : p)
+        );
+        this.projects$.next([...this.projects()]);
+        if (this.currentProject()?._id === projectId) {
+          this.currentProject.set(res.data);
+        }
+      })
+    );
+  }
+
+  revokeProjectAccess(projectId: string, userId: string): Observable<{ success: boolean; data: Project }> {
+    return this.http.delete<any>(`${this.apiUrl}/${projectId}/access`, {
+      body: { userId }
+    }).pipe(
+      tap(res => {
+        this.projects.update(projects =>
+          projects.map(p => p._id === projectId ? res.data : p)
+        );
+        this.projects$.next([...this.projects()]);
+        if (this.currentProject()?._id === projectId) {
+          this.currentProject.set(res.data);
+        }
+      })
+    );
+  }
+
+  searchUsers(query: string, limit: number = 8): Observable<ProjectUserOption[]> {
+    let params = new HttpParams()
+      .set('q', query)
+      .set('limit', String(limit));
+
+    return this.http.get<{ success: boolean; data: ProjectUserOption[] }>(`${this.apiUrl}/users/search`, { params }).pipe(
+      map(res => res.data || [])
     );
   }
 

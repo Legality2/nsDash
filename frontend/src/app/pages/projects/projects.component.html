@@ -102,6 +102,7 @@
           <div class="project-meta">
             <span class="meta-item">👤 {{ project.owner.username }}</span>
             <span class="meta-item">👥 {{ project.teamMembers.length }} team</span>
+            <span class="meta-item">{{ project.visibility === 'public' ? '🌐 Public' : '🔒 Private' }}</span>
           </div>
           <div class="progress-bar">
             <div
@@ -154,7 +155,7 @@
       >
         <div class="card-header">
           <h3 class="project-name">{{ project.name }}</h3>
-          <div class="card-actions">
+          <div class="card-actions" *ngIf="canEditProject(project)">
             <button
               class="btn-icon"
               (click)="$event.stopPropagation(); updateProjectStatus(project, 'archived')"
@@ -190,6 +191,60 @@
           <div class="stat">
             <span class="stat-label">Category</span>
             <span class="category-badge">{{ project.category }}</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Visibility</span>
+            <span class="visibility-badge" [class.visibility-badge--public]="project.visibility === 'public'">
+              {{ project.visibility }}
+            </span>
+          </div>
+        </div>
+
+        <div class="sharing-section" *ngIf="canManageSharing(project)">
+          <div class="sharing-row" (click)="$event.stopPropagation()">
+            <label class="sharing-label">Visibility</label>
+            <select class="sharing-select" [ngModel]="project.visibility" (ngModelChange)="updateProjectVisibility(project, $event)">
+              <option value="private">Private</option>
+              <option value="public">Public</option>
+            </select>
+          </div>
+
+          <div class="sharing-row" (click)="$event.stopPropagation()">
+            <input
+              class="sharing-input"
+              type="text"
+              [ngModel]="getShareForm(project._id).query"
+              (ngModelChange)="searchUsersForProject(project._id, $event)"
+              placeholder="Search by username or email"
+            />
+            <select
+              class="sharing-select"
+              [ngModel]="getShareForm(project._id).permission"
+              (ngModelChange)="getShareForm(project._id).permission = $event"
+            >
+              <option value="view">View</option>
+              <option value="edit">Edit</option>
+            </select>
+            <button class="btn-share" [disabled]="!getShareForm(project._id).userId" (click)="grantProjectAccess(project, $event)">Grant</button>
+          </div>
+
+          <div class="share-picker" *ngIf="userPickerResults[project._id]?.length">
+            <button
+              class="share-picker-item"
+              *ngFor="let user of userPickerResults[project._id]"
+              (click)="selectShareUser(project._id, user, $event)"
+              type="button"
+            >
+              <span class="share-picker-name">{{ user.username }}</span>
+              <span class="share-picker-email">{{ user.email }}</span>
+            </button>
+          </div>
+
+          <div class="share-list" *ngIf="project.accessList.length">
+            <div class="share-item" *ngFor="let share of project.accessList">
+              <span class="share-user">{{ share.user.username }} ({{ share.permission }})</span>
+              <button class="btn-remove-share" (click)="revokeProjectAccess(project, share.user._id, $event)">Remove</button>
+            </div>
           </div>
         </div>
 
@@ -228,7 +283,7 @@
         <h2 class="board-title">{{ selectedProject.name }}</h2>
         <p class="board-subtitle">{{ selectedProject.description }}</p>
       </div>
-      <button class="btn-create" (click)="showTaskModal = true">
+      <button class="btn-create" *ngIf="canEditProject(selectedProject)" (click)="showTaskModal = true">
         <span class="icon">➕</span> New Task
       </button>
     </div>
@@ -267,6 +322,7 @@
               </span>
               <button
                 class="btn-delete"
+                *ngIf="canEditProject(selectedProject)"
                 (click)="$event.stopPropagation(); deleteTask(task)"
                 title="Delete task"
               >
@@ -275,7 +331,7 @@
             </div>
           </div>
 
-          <button class="btn-add-task" (click)="showTaskModal = true">
+          <button class="btn-add-task" *ngIf="canEditProject(selectedProject)" (click)="showTaskModal = true">
             + Add Task
           </button>
         </div>
@@ -330,6 +386,13 @@
             <option value="medium">Medium</option>
             <option value="high">High</option>
             <option value="critical">Critical</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Visibility</label>
+          <select [(ngModel)]="newProject.visibility" class="form-input">
+            <option value="private">Private</option>
+            <option value="public">Public</option>
           </select>
         </div>
       </div>

@@ -25,6 +25,29 @@ const projectSchema = new mongoose.Schema(
         ref: 'User'
       }
     ],
+    visibility: {
+      type: String,
+      enum: ['private', 'public'],
+      default: 'private'
+    },
+    accessList: [
+      {
+        user: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User',
+          required: true
+        },
+        permission: {
+          type: String,
+          enum: ['view', 'edit'],
+          default: 'view'
+        },
+        grantedAt: {
+          type: Date,
+          default: Date.now
+        }
+      }
+    ],
     startDate: { type: Date },
     endDate: { type: Date },
     budget: { type: Number },

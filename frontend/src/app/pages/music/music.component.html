@@ -579,7 +579,7 @@
                 <div class="beat-card" (click)="loadBeat(beat)">
                   <div class="beat-card-header">
                     <h3 class="beat-card-title">{{ beat.name }}</h3>
-                    <span class="beat-card-meta">{{ beat.layers?.length || 1 }} layers</span>
+                    <span class="beat-card-meta">{{ beat.layers.length || 1 }} layers</span>
                   </div>
                   @if (beat.description) {
                     <div class="beat-card-desc">{{ beat.description }}</div>

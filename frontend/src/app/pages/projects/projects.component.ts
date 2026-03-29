@@ -4,7 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { ProjectService, Project, Task, ProjectStats } from '../../services/project.service';
+import { ProjectService, Project, Task, ProjectStats, ProjectUserOption } from '../../services/project.service';
+import { AuthService } from '../../services/auth.service';
 
 type TabType = 'overview' | 'projects' | 'board';
 type StatusFilter = 'all' | 'planning' | 'active' | 'on-hold' | 'completed' | 'archived';
@@ -18,6 +19,7 @@ type StatusFilter = 'all' | 'planning' | 'active' | 'on-hold' | 'completed' | 'a
 })
 export class ProjectsComponent implements OnInit, OnDestroy {
   private projectService = inject(ProjectService);
+  private authService = inject(AuthService);
   private destroy$ = new Subject<void>();
 
   // UI State
@@ -36,10 +38,15 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     description: '',
     category: 'general',
     priority: 'medium',
+    visibility: 'private',
     startDate: '',
     endDate: '',
     budget: 0
   };
+
+  shareForm: Record<string, { userId: string; query: string; permission: 'view' | 'edit' }> = {};
+  userPickerResults: Record<string, ProjectUserOption[]> = {};
+  isSearchingUsers: Record<string, boolean> = {};
 
   newTask = {
     title: '',
@@ -114,6 +121,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
       description: this.newProject.description,
       category: this.newProject.category as 'finance' | 'fashion' | 'music' | 'general',
       priority: this.newProject.priority as 'low' | 'medium' | 'high' | 'critical',
+      visibility: this.newProject.visibility as 'private' | 'public',
       startDate: this.newProject.startDate ? new Date(this.newProject.startDate) : undefined,
       endDate: this.newProject.endDate ? new Date(this.newProject.endDate) : undefined,
       budget: this.newProject.budget || undefined
@@ -139,6 +147,14 @@ export class ProjectsComponent implements OnInit, OnDestroy {
       });
   }
 
+  updateProjectVisibility(project: Project, visibility: 'private' | 'public') {
+    this.projectService.updateProject(project._id, { visibility })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        error: (err) => console.error('Error updating project visibility:', err)
+      });
+  }
+
   deleteProject(project: Project) {
     if (confirm(`Delete project "${project.name}"? This action cannot be undone.`)) {
       this.projectService.deleteProject(project._id)
@@ -147,6 +163,31 @@ export class ProjectsComponent implements OnInit, OnDestroy {
           error: (err) => console.error('Error deleting project:', err)
         });
     }
+  }
+
+  grantProjectAccess(project: Project, event?: Event) {
+    event?.stopPropagation();
+    const form = this.shareForm[project._id];
+    if (!form?.userId?.trim()) return;
+
+    this.projectService.grantProjectAccess(project._id, form.userId.trim(), form.permission)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.shareForm[project._id] = { userId: '', query: '', permission: form.permission };
+          this.userPickerResults[project._id] = [];
+        },
+        error: (err) => console.error('Error granting project access:', err)
+      });
+  }
+
+  revokeProjectAccess(project: Project, userId: string, event?: Event) {
+    event?.stopPropagation();
+    this.projectService.revokeProjectAccess(project._id, userId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        error: (err) => console.error('Error revoking project access:', err)
+      });
   }
 
   createTask() {
@@ -238,10 +279,71 @@ export class ProjectsComponent implements OnInit, OnDestroy {
       description: '',
       category: 'general',
       priority: 'medium',
+      visibility: 'private',
       startDate: '',
       endDate: '',
       budget: 0
     };
+  }
+
+  canManageSharing(project: Project | null): boolean {
+    if (!project) return false;
+    return project.owner?._id === this.getCurrentUserId();
+  }
+
+  canEditProject(project: Project | null): boolean {
+    if (!project) return false;
+    const userId = this.getCurrentUserId();
+    if (!userId) return false;
+    if (project.owner?._id === userId) return true;
+    if (project.teamMembers?.some(m => m._id === userId)) return true;
+    return project.accessList?.some(a => a.user?._id === userId && a.permission === 'edit') || false;
+  }
+
+  getShareForm(projectId: string): { userId: string; query: string; permission: 'view' | 'edit' } {
+    if (!this.shareForm[projectId]) {
+      this.shareForm[projectId] = { userId: '', query: '', permission: 'view' };
+    }
+    return this.shareForm[projectId];
+  }
+
+  searchUsersForProject(projectId: string, query: string) {
+    const form = this.getShareForm(projectId);
+    form.query = query;
+
+    if (query.trim().length < 2) {
+      this.userPickerResults[projectId] = [];
+      form.userId = '';
+      return;
+    }
+
+    this.isSearchingUsers[projectId] = true;
+    this.projectService.searchUsers(query.trim())
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (users) => {
+          this.userPickerResults[projectId] = users;
+          this.isSearchingUsers[projectId] = false;
+        },
+        error: (err) => {
+          console.error('Error searching users:', err);
+          this.userPickerResults[projectId] = [];
+          this.isSearchingUsers[projectId] = false;
+        }
+      });
+  }
+
+  selectShareUser(projectId: string, user: ProjectUserOption, event?: Event) {
+    event?.stopPropagation();
+    const form = this.getShareForm(projectId);
+    form.userId = user._id;
+    form.query = `${user.username} (${user.email})`;
+    this.userPickerResults[projectId] = [];
+  }
+
+  private getCurrentUserId(): string | null {
+    const user = this.authService.currentUser();
+    return (user as any)?.id || (user as any)?._id || null;
   }
 
   resetTaskForm() {

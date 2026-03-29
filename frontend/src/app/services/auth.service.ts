@@ -27,14 +27,24 @@ export class AuthService {
 
   private loadStoredAuth() {
     const token = localStorage.getItem('token');
-    const user = localStorage.getItem('user');
+    const userRaw = localStorage.getItem('user');
     
-    if (token && user) {
-      this.currentUser.set(JSON.parse(user));
+    if (!token || !userRaw) return;
+
+    try {
+      const parsedUser = JSON.parse(userRaw) as AuthUser;
+      this.currentUser.set(parsedUser);
       this.isAuthenticated.set(true);
       this.verifyToken(token).subscribe({
-        error: () => this.logout()
+        next: (result) => {
+          if (!result.success) {
+            this.invalidateSessionIfUnchanged(token);
+          }
+        }
       });
+    } catch {
+      // Corrupt/legacy localStorage value (e.g. "undefined")
+      this.logout();
     }
   }
 
@@ -85,11 +95,7 @@ export class AuthService {
   }
 
   logout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    this.isAuthenticated.set(false);
-    this.currentUser.set(null);
-    this.error.set(null);
+    this.clearAuthState();
     this.router.navigate(['/login']);
   }
 
@@ -111,7 +117,6 @@ export class AuthService {
         return response;
       }),
       catchError(() => {
-        this.logout();
         return of({ success: false, user: null as any });
       })
     );
@@ -124,5 +129,20 @@ export class AuthService {
   private storeAuth(token: string, user: AuthUser) {
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));
+  }
+
+  private clearAuthState() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    this.isAuthenticated.set(false);
+    this.currentUser.set(null);
+    this.error.set(null);
+  }
+
+  private invalidateSessionIfUnchanged(checkedToken: string) {
+    // Avoid clobbering a brand-new successful login with a stale verify request result.
+    if (localStorage.getItem('token') !== checkedToken) return;
+    this.clearAuthState();
+    this.router.navigate(['/login']);
   }
 }
